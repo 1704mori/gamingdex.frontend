@@ -19,6 +19,13 @@ RUN \
 
 # 2. Rebuild the source code only when needed
 FROM base AS builder
+
+
+ARG NEXT_PUBLIC_API_URL
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV API_URL=$NEXT_PUBLIC_API_URL
+
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -30,9 +37,6 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-ARG NEXT_PUBLIC_API_URL
-
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NODE_ENV=production
 
 RUN addgroup -g 1001 -S nodejs

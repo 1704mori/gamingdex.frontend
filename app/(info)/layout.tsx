@@ -12,11 +12,11 @@ export default function RootLayout({
         <div className="flex flex-col gap-2">
           <span className="font-semibold text-lg -mb-1">About</span>
           <Link
-            href="/data"
+            href="/game-data"
             className="flex items-center gap-1 text-sm font-medium p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800"
           >
             <DatabaseIcon className="w-4 h-4" />
-            Data
+            Game Data
           </Link>
           <Link
             href="/terms-of-service"

@@ -22,21 +22,18 @@ export default function RootLayout({
             href="/terms-of-service"
             className="flex items-center gap-1 text-sm font-medium p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800"
           >
-            <DatabaseIcon className="w-4 h-4" />
             Terms of Service
           </Link>
           <Link
             href="/privacy-policy"
             className="flex items-center gap-1 text-sm font-medium p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800"
           >
-            <DatabaseIcon className="w-4 h-4" />
             Privace Policy
           </Link>
           <Link
             href="/review-policy"
             className="flex items-center gap-1 text-sm font-medium p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800"
           >
-            <DatabaseIcon className="w-4 h-4" />
             Review Policy
           </Link>
         </div>

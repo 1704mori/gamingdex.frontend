@@ -28,7 +28,7 @@ export default function RootLayout({
             href="/privacy-policy"
             className="flex items-center gap-1 text-sm font-medium p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800"
           >
-            Privace Policy
+            Privacy Policy
           </Link>
           <Link
             href="/review-policy"

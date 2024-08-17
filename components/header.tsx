@@ -1,0 +1,105 @@
+"use client";
+
+import {
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuSub,
+  DropdownMenuSeparator,
+  DropdownMenuContent,
+  DropdownMenu,
+} from "@/components/ui/dropdown-menu";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+import { GamepadIcon, UserIcon, MenuIcon } from "lucide-react";
+
+import Link from "next/link";
+
+import { useAtom } from "jotai";
+import { userAtom } from "@/lib/stores/user";
+
+export default function Header() {
+  const [user] = useAtom(userAtom);
+  return (
+    <header className="flex justify-between items-center py-6 px-4 md:px-6 lg:px-8 bg-neutral-900 text-neutral-50 dark:bg-neutral-950 dark:text-neutral-50">
+      <div className="flex items-center">
+        <GamepadIcon className="h-8 w-8 mr-2" />
+        <h1 className="text-2xl font-bold">GamingDex</h1>
+        <nav className="hidden md:flex space-x-6 ml-6">
+          <Link className="hover:text-neutral-300" href="/">
+            Home
+          </Link>
+          <Link className="hover:text-neutral-300" href="/games">
+            Games
+          </Link>
+          <Link className="hover:text-neutral-300" href="#">
+            Profile
+          </Link>
+          <Link className="hover:text-neutral-300" href="#">
+            About
+          </Link>
+        </nav>
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="relative min-w-72">
+          <Input className="w-full" placeholder="Search" />
+        </div>
+        <div className="flex items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                className="text-neutral-50 hover:bg-neutral-800 dark:hover:bg-neutral-700 rounded-md"
+                variant="ghost"
+              >
+                <UserIcon className="h-6 w-6 mr-2" />
+                {user?.id && <p>{user?.username}</p>}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {user?.id && (
+                <>
+                  <DropdownMenuItem>
+                    <Link href={`/user/${user.id}`}>Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Link href="#">Settings</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger disabled>
+                  Interface Language
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem>English</DropdownMenuItem>
+                  <DropdownMenuItem>Chinese</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              {user?.id ? (
+                <DropdownMenuItem>
+                  <button type="button">Sign Out</button>
+                </DropdownMenuItem>
+              ) : (
+                <div className="flex flex-col gap-2 my-2">
+                  <Button size="xs">Sign in</Button>
+                  <Button size="xs" variant="outline">
+                    Register
+                  </Button>
+                </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <div className="md:hidden">
+            <Button size="icon" variant="outline">
+              <MenuIcon className="h-6 w-6" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}

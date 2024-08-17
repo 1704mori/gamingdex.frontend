@@ -30,6 +30,9 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
+ARG NEXT_PUBLIC_API_URL
+
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NODE_ENV=production
 
 RUN addgroup -g 1001 -S nodejs

@@ -1,9 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   images: {
-    domains: ["imgur.com", "i.imgur.com", "images.igdb.com"],
+    remotePatterns: [
+      {
+        hostname: "images.igdb.com",
+      },
+    ],
   },
-  output: 'standalone',
 };
 
 module.exports = nextConfig;

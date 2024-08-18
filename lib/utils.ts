@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import dompurify from "dompurify";
 
 export const API_URL =
   typeof window != "undefined"
@@ -109,3 +110,21 @@ export function getRelativeTimeString(
   const rtf = new Intl.RelativeTimeFormat(lang, { numeric: "auto" });
   return rtf.format(Math.floor(deltaSeconds / divisor), units[unitIndex]);
 }
+
+export const markdownToHtml = (_text: string): string => {
+  const text = dompurify.sanitize(_text);
+  const paragraphs = text.split(/\n\s*\n/);
+  const formattedParagraphs = paragraphs.map((paragraph) => {
+    const formatted = paragraph
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/_(.*?)_/g, "<u>$1</u>")
+      .replace(/~~(.*?)~~/g, "<del>$1</del>")
+      .replace(
+        /(https?:\/\/[^\s]+)/g,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:text-blue-700 underline">$1</a>',
+      );
+    return `<p>${formatted}</p>`;
+  });
+  return formattedParagraphs.join("");
+};

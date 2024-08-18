@@ -1,8 +1,14 @@
 "use client";
 
-import { GameType } from "@/lib/types/game";
+import { GameReview, GameType } from "@/lib/types/game";
 import Image from "next/image";
-import { shimmer, toBase64 } from "@/lib/utils";
+import {
+  API_URL,
+  getCookie,
+  markdownToHtml,
+  shimmer,
+  toBase64,
+} from "@/lib/utils";
 import {
   Edit,
   Flag,
@@ -15,8 +21,11 @@ import {
   GamepadIcon,
   PlayIcon,
 } from "lucide-react";
-import { useState } from "react";
 import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog";
+import AddToLibrary from "./addtolibrary";
+import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "../ui/skeleton";
 
 function platformToIcon(platform: string) {
   if (
@@ -37,17 +46,20 @@ function platformToIcon(platform: string) {
 }
 
 export default function Game({ game }: { game: GameType }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const descriptionLimit = 200;
-
-  const toggleDescription = () => {
-    setIsExpanded(!isExpanded);
-  };
-
-  const truncatedDescription =
-    game.description!.length > descriptionLimit && !isExpanded
-      ? `${game.description?.substring(0, descriptionLimit)}...`
-      : game.description;
+  const { data: reviewsData, isLoading: isReviewsLoading } = useQuery({
+    queryKey: ["game_reviews", game.id],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_URL}/reviews/game/${game.id}?limit=6&includes=platform,user`,
+        {
+          headers: {
+            Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+          },
+        },
+      );
+      return response.json<GameReview[]>();
+    },
+  });
 
   return (
     <main className="flex flex-col">
@@ -65,26 +77,40 @@ export default function Game({ game }: { game: GameType }) {
                   fill
                 />
               </div>
-              <div className="flex items-center flex-wrap gap-4 text-neutral-600 dark:text-neutral-400">
+              <div className="flex items-center flex-wrap gap-2 text-neutral-600 dark:text-neutral-400">
                 <div className="flex items-center space-x-2 p-1 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
-                  <GamepadIcon />
+                  <GamepadIcon className="w-5 h-5" />
                   <div>
                     <p className="text-sm font-medium">2.3k plays</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 p-1 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
-                  <PlayIcon />
+                  <PlayIcon className="w-5 h-5" />
                   <div>
                     <p className="text-sm font-medium">2.3k playing</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 p-1 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
-                  <NotebookPenIcon />
-                  <div>
-                    <p className="text-sm font-medium">2.3k reviews</p>
-                  </div>
+                  {isReviewsLoading ? (
+                    <>
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <Skeleton className="h-4 w-24" />
+                    </>
+                  ) : (
+                    <>
+                      <NotebookPenIcon className="w-5 h-5" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          {Intl.NumberFormat("en", {
+                            notation: "compact",
+                          }).format(reviewsData?.pagination?.total ?? 0)}{" "}
+                          reviews
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -121,13 +147,20 @@ export default function Game({ game }: { game: GameType }) {
 
               <div className="mb-6">
                 <div className="flex flex-wrap justify-items-start gap-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline">
+                        <Heart className="h-5 w-5 mr-2" />
+                        Add to My List
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="md:min-w-[48rem] max-sm:max-h-[48rem]">
+                      <AddToLibrary gameId={game.id} />
+                    </DialogContent>
+                  </Dialog>
                   <Button variant="outline">
                     <Star className="h-5 w-5 mr-2" />
-                    Rate
-                  </Button>
-                  <Button variant="outline">
-                    <Heart className="h-5 w-5 mr-2" />
-                    Add to My List
+                    Favorite
                   </Button>
                   <Button variant="outline">
                     <Flag className="h-5 w-5 mr-2" />
@@ -266,28 +299,82 @@ export default function Game({ game }: { game: GameType }) {
           <div className="mb-8">
             <h2 className="text-2xl font-bold">Reviews</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                className="rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50"
-                key={i}
-              >
-                <div className="flex items-center space-x-2 mb-2">
-                  <img
-                    alt="User Avatar"
-                    className="w-8 h-8 rounded-full"
-                    src="/placeholder.svg"
-                  />
-                  <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
-                    @johndoe
-                  </p>
-                </div>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                  "This game is a masterpiece! The storyline is gripping, and
-                  the graphics are stunning. Highly recommended!"
-                </p>
-              </div>
-            ))}
+
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+            {isReviewsLoading
+              ? // Render skeletons when loading
+                Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    className="break-inside-avoid rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50 mb-4"
+                    key={index}
+                  >
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Skeleton className="w-8 h-8 rounded-full" />
+                      <Skeleton className="h-4 w-1/3" />
+                    </div>
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-4 w-5/6 mb-2" />
+                    <Skeleton className="h-4 w-2/3 mb-2" />
+                  </div>
+                ))
+              : reviewsData?.attributes.map((review) => {
+                  const fullReviewText = review.review_text ?? "";
+                  const isLongReview = fullReviewText.length > 150;
+                  const displayedText = isLongReview
+                    ? fullReviewText.slice(0, 150) + "..."
+                    : fullReviewText;
+
+                  return (
+                    <div
+                      className="break-inside-avoid rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50 mb-4"
+                      key={review.id}
+                    >
+                      <div className="flex items-center space-x-2 mb-2">
+                        <img
+                          className="w-8 h-8 rounded-full"
+                          src="/placeholder.svg"
+                        />
+                        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
+                          @{review.user.username}
+                        </p>
+                      </div>
+                      <p
+                        className="text-sm text-neutral-600 dark:text-neutral-400 mb-2"
+                        dangerouslySetInnerHTML={{
+                          __html: markdownToHtml(displayedText),
+                        }}
+                      ></p>
+                      {isLongReview && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              Read More
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[425px]">
+                            <div className="flex flex-col gap-4">
+                              <div className="flex items-center space-x-2">
+                                <img
+                                  className="w-8 h-8 rounded-full"
+                                  src="/placeholder.svg"
+                                />
+                                <p className="text-sm font-medium">
+                                  @{review.user.username}
+                                </p>
+                              </div>
+                              <p
+                                className="text-sm"
+                                dangerouslySetInnerHTML={{
+                                  __html: markdownToHtml(fullReviewText),
+                                }}
+                              ></p>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
+                  );
+                })}
           </div>
         </div>
       </section>

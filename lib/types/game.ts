@@ -3,6 +3,7 @@ import { Company } from "./company";
 import { Genre } from "./genre";
 import { Platform } from "./platform";
 import { Staff } from "./staff";
+import { User } from "./user";
 
 export type GameState =
   | "released"
@@ -51,7 +52,31 @@ export interface GameReview {
   gameId: string;
   userId: string;
   rating: number;
-  reviewText?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  review_text?: string;
+  mastered: boolean;
+  start_date?: string;
+  end_date?: string;
+  played_on: string;
+  created_at: Date;
+  updated_at: Date;
+
+  game: GameType;
+  user: User;
+  platform: Platform;
 }
+
+export const GAME_RATINGS = {
+  1: "Unplayable",
+  2: "Frustrating",
+  3: "Disappointing",
+  4: "Mediocre",
+  5: "Average",
+  6: "Decent",
+  7: "Good",
+  8: "Great",
+  9: "Excellent",
+  10: "Masterpiece",
+} as const;
+
+export type GameRating = keyof typeof GAME_RATINGS;
+export type GameRatingName = (typeof GAME_RATINGS)[GameRating];

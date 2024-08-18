@@ -25,7 +25,7 @@ function Providers({ children }: { children: React.ReactNode }) {
   const [, setUser] = useAtom(userAtom);
 
   const { data } = useQuery({
-    enabled: !!getCookie("gd:accessToken"),
+    // enabled: !!getCookie("gd:accessToken"),
     queryKey: ["user"],
     queryFn: async () => {
       let response = await fetch(`${API_URL}/auth/check`, {
@@ -43,20 +43,20 @@ function Providers({ children }: { children: React.ReactNode }) {
           },
           body: JSON.stringify({ refreshToken }),
         });
-        const refreshResult = await refreshResponse.json();
+        const refreshResult = await refreshResponse.json<{
+          accessToken: string;
+          refreshToken: string;
+        }>();
 
-        if (refreshResponse.ok && refreshResult.result == "ok") {
-          const { result, attributes } = await refreshResponse.json<{
-            accessToken: string;
-            refreshToken: string;
-          }>();
+        if (refreshResult.result == "ok") {
+          const { result, attributes } = refreshResult;
 
-          if (result == "error") {
+          if (result != "ok") {
             handleLogout();
             return;
           }
 
-          setTokenToCookie("gd:accessToken", attributes.accessToken);
+          await setTokenToCookie("gd:accessToken", attributes.accessToken);
 
           // Retry the /auth/check request with the new token
           response = await fetch(`${API_URL}/auth/check`, {

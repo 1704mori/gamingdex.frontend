@@ -34,7 +34,7 @@ export function GamesCards() {
     queryKey: ["games", page, limit, sortBy, search],
     queryFn: async () => {
       const response = await fetch(
-        `${API_URL}/games/?page=${page}&limit=${limit}&order_by=${sortBy}&search=${search}`,
+        `${API_URL}/games?page=${page}&limit=${limit}&order_by=${sortBy}&search=${search}`,
       );
       return response.json<GameType[]>();
     },

@@ -77,7 +77,7 @@ export default function AddToLibrary({ gameId }: { gameId: string }) {
     queryKey: ["game_reviews_addlibrary", gameId, user?.id],
     queryFn: async () => {
       const response = await fetch(
-        `${API_URL}/reviews/game/${gameId}?includes=platform&user_id=${user?.id}`,
+        `${API_URL}/reviews?game_id=${gameId}&includes=platform&user_id=${user?.id}`,
         {
           headers: {
             Authorization: `Bearer ${getCookie("gd:accessToken")}`,

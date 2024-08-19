@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog";
 import AddToLibrary from "./addtolibrary";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "../ui/skeleton";
+import { useState } from "react";
 
 function platformToIcon(platform: string) {
   if (
@@ -46,11 +47,17 @@ function platformToIcon(platform: string) {
 }
 
 export default function Game({ game }: { game: GameType }) {
+  const [expandedReview, setExpandedReview] = useState<GameReview | null>(null);
+
+  const handleBackClick = () => {
+    setExpandedReview(null);
+  };
+
   const { data: reviewsData, isLoading: isReviewsLoading } = useQuery({
     queryKey: ["game_reviews", game.id],
     queryFn: async () => {
       const response = await fetch(
-        `${API_URL}/reviews/game/${game.id}?limit=6&includes=platform,user`,
+        `${API_URL}/reviews?limit=6&game_id=${game.id}&order_by=created_at asc&includes=platform,user`,
         {
           headers: {
             Authorization: `Bearer ${getCookie("gd:accessToken")}`,
@@ -115,7 +122,7 @@ export default function Game({ game }: { game: GameType }) {
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4">
                 <h2 className="text-3xl font-bold mb-4">{game.title}</h2>
                 <div className="flex flex-col gap-2 mb-4">
                   <div className="flex items-center space-x-2">
@@ -294,88 +301,93 @@ export default function Game({ game }: { game: GameType }) {
             </div>
           </div>
         </section>*/}
-      <section className="py-12 md:py-16 lg:py-20 bg-neutral-900 text-neutral-50 dark:bg-neutral-950 dark:text-neutral-50">
+      <section className="bg-neutral-900 text-neutral-50 dark:bg-neutral-950 dark:text-neutral-50">
         <div className="container mx-auto px-4 md:px-6 lg:px-8">
           <div className="mb-8">
             <h2 className="text-2xl font-bold">Reviews</h2>
           </div>
 
-          <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
-            {isReviewsLoading
-              ? // Render skeletons when loading
-                Array.from({ length: 6 }).map((_, index) => (
-                  <div
-                    className="break-inside-avoid rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50 mb-4"
-                    key={index}
-                  >
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Skeleton className="w-8 h-8 rounded-full" />
-                      <Skeleton className="h-4 w-1/3" />
-                    </div>
-                    <Skeleton className="h-4 w-full mb-2" />
-                    <Skeleton className="h-4 w-5/6 mb-2" />
-                    <Skeleton className="h-4 w-2/3 mb-2" />
-                  </div>
-                ))
-              : reviewsData?.attributes.map((review) => {
-                  const fullReviewText = review.review_text ?? "";
-                  const isLongReview = fullReviewText.length > 150;
-                  const displayedText = isLongReview
-                    ? fullReviewText.slice(0, 150) + "..."
-                    : fullReviewText;
-
-                  return (
+          {expandedReview ? (
+            <div className="flex flex-col gap-4">
+              <Button variant="outline" onClick={handleBackClick}>
+                Back to All Reviews
+              </Button>
+              <div className="rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50">
+                <div className="flex items-center space-x-2 mb-2">
+                  <img
+                    className="w-8 h-8 rounded-full"
+                    src="/placeholder.svg"
+                  />
+                  <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
+                    @{expandedReview.user.username}
+                  </p>
+                </div>
+                <p
+                  className="prose dark:prose-invert max-w-full"
+                  dangerouslySetInnerHTML={{
+                    __html: markdownToHtml(expandedReview.review_text!),
+                  }}
+                ></p>
+              </div>
+            </div>
+          ) : (
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+              {isReviewsLoading
+                ? // Render skeletons when loading
+                  Array.from({ length: 6 }).map((_, index) => (
                     <div
                       className="break-inside-avoid rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50 mb-4"
-                      key={review.id}
+                      key={index}
                     >
                       <div className="flex items-center space-x-2 mb-2">
-                        <img
-                          className="w-8 h-8 rounded-full"
-                          src="/placeholder.svg"
-                        />
-                        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
-                          @{review.user.username}
-                        </p>
+                        <Skeleton className="w-8 h-8 rounded-full" />
+                        <Skeleton className="h-4 w-1/3" />
                       </div>
-                      <p
-                        className="text-sm text-neutral-600 dark:text-neutral-400 mb-2"
-                        dangerouslySetInnerHTML={{
-                          __html: markdownToHtml(displayedText),
-                        }}
-                      ></p>
-                      {isLongReview && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              Read More
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[425px]">
-                            <div className="flex flex-col gap-4">
-                              <div className="flex items-center space-x-2">
-                                <img
-                                  className="w-8 h-8 rounded-full"
-                                  src="/placeholder.svg"
-                                />
-                                <p className="text-sm font-medium">
-                                  @{review.user.username}
-                                </p>
-                              </div>
-                              <p
-                                className="text-sm"
-                                dangerouslySetInnerHTML={{
-                                  __html: markdownToHtml(fullReviewText),
-                                }}
-                              ></p>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      )}
+                      <Skeleton className="h-4 w-full mb-2" />
+                      <Skeleton className="h-4 w-5/6 mb-2" />
+                      <Skeleton className="h-4 w-2/3 mb-2" />
                     </div>
-                  );
-                })}
-          </div>
+                  ))
+                : reviewsData?.attributes.map((review) => {
+                    const isLongReview = review.review_text!.length > 150;
+                    const displayedText = isLongReview
+                      ? review.review_text!.slice(0, 150) + "..."
+                      : review.review_text;
+
+                    return (
+                      <div
+                        className="break-inside-avoid rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50 mb-4"
+                        key={review.id}
+                      >
+                        <div className="flex items-center space-x-2 mb-2">
+                          <img
+                            className="w-8 h-8 rounded-full"
+                            src="/placeholder.svg"
+                          />
+                          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
+                            @{review.user.username}
+                          </p>
+                        </div>
+                        <p
+                          className="text-sm text-neutral-600 dark:text-neutral-400 mb-2"
+                          dangerouslySetInnerHTML={{
+                            __html: markdownToHtml(displayedText!),
+                          }}
+                        ></p>
+                        {isLongReview && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setExpandedReview(review)}
+                          >
+                            {expandedReview ? "Show Less" : "Read More"}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+            </div>
+          )}
         </div>
       </section>
     </main>

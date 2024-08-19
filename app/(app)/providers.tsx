@@ -5,20 +5,20 @@ import { userAtom } from "@/lib/stores/user";
 import { User } from "@/lib/types/user";
 import { API_URL, deleteCookie, getCookie } from "@/lib/utils";
 import {
-  QueryClient,
-  QueryClientProvider,
+  // QueryClient,
+  // QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useRouter } from "next/navigation";
 
-const queryClient = new QueryClient();
-
-function _QueryClientProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-}
+// const queryClient = new QueryClient();
+//
+// function _QueryClientProvider({ children }: { children: React.ReactNode }) {
+//   return (
+//     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+//   );
+// }
 
 function Providers({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -93,8 +93,8 @@ export default function RootProvider({
   children: React.ReactNode;
 }) {
   return (
-    <_QueryClientProvider>
-      <Providers>{children}</Providers>
-    </_QueryClientProvider>
+    // <_QueryClientProvider>
+    <Providers>{children}</Providers>
+    // </_QueryClientProvider>
   );
 }

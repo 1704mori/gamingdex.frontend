@@ -20,6 +20,9 @@ import Link from "next/link";
 
 import { useAtom } from "jotai";
 import { userAtom } from "@/lib/stores/user";
+import { Dialog, DialogTrigger } from "./ui/dialog";
+import EditUserDialog from "./updateuser";
+import { deleteCookie } from "@/lib/utils";
 
 export default function Header() {
   const [user] = useAtom(userAtom);
@@ -64,9 +67,15 @@ export default function Header() {
                   <DropdownMenuItem>
                     <Link href={`/user/${user.id}`}>Profile</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="#">Settings</Link>
-                  </DropdownMenuItem>
+                  <Dialog>
+                    <DialogTrigger className="w-full">
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        Settings
+                      </DropdownMenuItem>
+                    </DialogTrigger>
+
+                    <EditUserDialog />
+                  </Dialog>
                 </>
               )}
               <DropdownMenuSub>
@@ -81,7 +90,15 @@ export default function Header() {
               <DropdownMenuSeparator />
               {user?.id ? (
                 <DropdownMenuItem>
-                  <button type="button">Sign Out</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      deleteCookie("gd:accessToken");
+                      deleteCookie("gd:refreshToken");
+                    }}
+                  >
+                    Sign Out
+                  </button>
                 </DropdownMenuItem>
               ) : (
                 <div className="flex flex-col gap-2 my-2">

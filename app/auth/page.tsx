@@ -65,8 +65,8 @@ export default function AuthPage() {
     }
 
     let error = await setTokenToCookie(
-      result.attributes?.accessToken!,
       "gd:accessToken",
+      result.attributes?.accessToken!,
     );
     if (error != "") {
       toast.error("Could not log you in this time, try again.");
@@ -74,8 +74,8 @@ export default function AuthPage() {
     }
 
     error = await setTokenToCookie(
-      result.attributes?.refreshToken!,
       "gd:refreshToken",
+      result.attributes?.refreshToken!,
     );
     if (error != "") {
       toast.error("Could not log you in this time, try again.");

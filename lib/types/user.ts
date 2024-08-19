@@ -1,3 +1,5 @@
+import { GameReview, ReviewComment, ReviewLike } from "./game";
+
 export type Role =
   | "admin"
   | "developer"
@@ -21,4 +23,8 @@ export interface User {
   role: Role;
   createdAt: Date;
   updatedAt: Date;
+
+  reviews: GameReview[];
+  likes: ReviewLike[];
+  comments: ReviewComment[];
 }

@@ -1,8 +1,11 @@
 import { shimmer, toBase64 } from "@/lib/utils";
-import { FlagIcon, StarIcon, TrophyIcon } from "lucide-react";
+import { FlagIcon, StarIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "../ui/button";
+import { User } from "@/lib/types/user";
+import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog";
+import ReportDialog from "../report";
 
 function getRoleColor(role: string): string {
   switch (role) {
@@ -53,8 +56,8 @@ function shouldUseDarkText(backgroundColor: string) {
   return luminance > 0.5;
 }
 
-export default function Profile() {
-  const role = "admin";
+export default function Profile({ user }: { user: User }) {
+  const role = user.role;
   const backgroundColor = getRoleColor(role);
   const textColor = shouldUseDarkText(backgroundColor)
     ? "text-gray-900"
@@ -68,13 +71,13 @@ export default function Profile() {
             <Image
               width={128}
               height={128}
-              alt="User Avatar"
+              alt={user.username}
               placeholder={`data:image/svg+xml;base64,${toBase64(shimmer(500, 300))}`}
-              className="object-cover w-32 h-32 rounded-lg mb-4"
-              src="https://images.igdb.com/igdb/image/upload/t_1080p/co7497.jpg"
+              className="object-cover w-32 h-32 rounded-lg mb-4 bg-neutral-200 dark:bg-neutral-900"
+              src="/placeholder.png"
             />
             <div className="flex flex-col self-end mb-4">
-              <h2 className="text-2xl font-bold">Username</h2>
+              <h2 className="text-2xl font-bold">{user.username}</h2>
 
               <span
                 className={`px-2 py-1 text-xs font-medium w-fit rounded-md shadow-sm ${textColor}`}
@@ -86,13 +89,21 @@ export default function Profile() {
           </div>
 
           <div className="mb-4">
-            <Button size="sm" variant="outline">
-              <FlagIcon className="h-5 w-5 mr-2" />
-              Report
-            </Button>
+            <p className="font-semibold text-sm">{user.id}</p>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <FlagIcon className="h-5 w-5 mr-2" />
+                  Report
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <ReportDialog initialEntityType="user" data={user} />
+              </DialogContent>
+            </Dialog>
           </div>
 
-          <div className="mb-6">
+          {/*<div className="mb-6">
             <h2 className="text-xl font-bold px-2 py-1 w-fit rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
               Recent Lists
             </h2>
@@ -122,7 +133,7 @@ export default function Profile() {
                 <h3 className="text-lg mt-1 font-semibold">nome ai karaio</h3>
               </div>
             ))}
-          </div>
+          </div>*/}
 
           {/*<div className="mb-6">
             <h3 className="text-xl font-semibold mb-2">Favorite Games</h3>
@@ -155,36 +166,36 @@ export default function Profile() {
             </div>
           </div>*/}
         </div>
-        <div>
+        <div className="flex flex-col">
           <div className="mb-6">
-            <h2 className="text-xl font-bold px-2 py-1 w-fit rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
+            <h2 className="text-xl max-sm:w-full font-bold px-2 py-1 w-fit rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
               Recently Played
             </h2>
           </div>
           <div className="grid grid-cols-1 gap-4 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800 p-2">
-            {Array.from({ length: 5 }).map((_, i) => (
+            {user.reviews.map((review) => (
               <div
-                key={i}
+                key={review.id}
                 className="border border-neutral-200 dark:border-neutral-800 bg-neutral-200 text-neutral-50 dark:bg-neutral-900 dark:text-neutral-50 rounded-lg overflow-hidden shadow-md transition-transform duration-300 hover:-translate-y-1 grid grid-cols-[100px_1fr]"
               >
                 <Link href="" className="relative">
                   <Image
                     fill
-                    alt="Game Cover"
+                    alt={review.game.title}
                     className="absolute inset-0 w-full h-full object-cover"
-                    src="https://images.igdb.com/igdb/image/upload/t_1080p/co7497.jpg"
+                    src={review.game.cover_url!}
                   />
                 </Link>
                 <div className="p-4">
                   <Link
                     href=""
-                    className="hover:underline text-lg font-semibold mb-2"
+                    className="hover:underline text-lg font-semibold mb-2 truncate max-w-64 block"
                   >
-                    Game Title
+                    {review.game.title}
                   </Link>
                   <div className="flex items-center justify-between mt-2">
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Status: Playing
+                      Status: todo
                     </div>
                     <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
                       Score:
@@ -193,7 +204,7 @@ export default function Profile() {
                           <StarIcon
                             key={index}
                             className={`h-4 w-4 ${
-                              index < Math.round((0 ?? 0) / 2)
+                              index < Math.round((review.rating ?? 0) / 2)
                                 ? "text-yellow-500"
                                 : "text-neutral-400"
                             }`}

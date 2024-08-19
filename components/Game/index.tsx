@@ -23,6 +23,7 @@ import {
   PlayIcon,
   HeartIcon,
   MessageSquareIcon,
+  TrophyIcon,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog";
@@ -33,6 +34,13 @@ import { useState } from "react";
 import { useAtom } from "jotai";
 import { userAtom } from "@/lib/stores/user";
 import { CommentsSection } from "./CommentsSection";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
+import ReportDialog from "../report";
 
 function platformToIcon(platform: string) {
   if (
@@ -135,14 +143,14 @@ export default function Game({ game }: { game: GameType }) {
                 <div className="flex items-center space-x-2 p-1 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
                   <GamepadIcon className="w-5 h-5" />
                   <div>
-                    <p className="text-sm font-medium">2.3k plays</p>
+                    <p className="text-sm font-medium">soon</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 p-1 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
                   <PlayIcon className="w-5 h-5" />
                   <div>
-                    <p className="text-sm font-medium">2.3k playing</p>
+                    <p className="text-sm font-medium">soon</p>
                   </div>
                 </div>
 
@@ -175,7 +183,7 @@ export default function Game({ game }: { game: GameType }) {
                   <div className="flex items-center space-x-2">
                     {/* Rating Badge */}
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-500 text-white">
-                      {null ?? "N/A"}
+                      {game.score ?? "N/A"}
                       <span className="ml-1 text-xs">/ 10</span>
                     </span>
                     {/* Star Icons */}
@@ -184,7 +192,7 @@ export default function Game({ game }: { game: GameType }) {
                         <Star
                           key={index}
                           className={`h-5 w-5 ${
-                            index < Math.round((0 ?? 0) / 2)
+                            index < Math.round((game.score ?? 0) / 2)
                               ? "text-yellow-500"
                               : "text-neutral-400"
                           }`}
@@ -212,18 +220,27 @@ export default function Game({ game }: { game: GameType }) {
                       <AddToLibrary gameId={game.id} />
                     </DialogContent>
                   </Dialog>
-                  <Button variant="outline">
+                  {/*<Button variant="outline">
                     <Star className="h-5 w-5 mr-2" />
                     Favorite
-                  </Button>
-                  <Button variant="outline">
-                    <Flag className="h-5 w-5 mr-2" />
-                    Report
-                  </Button>
-                  <Button variant="outline">
+                  </Button>*/}
+
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline">
+                        <Flag className="h-5 w-5 mr-2" />
+                        Report
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <ReportDialog initialEntityType="game" data={game} />
+                    </DialogContent>
+                  </Dialog>
+
+                  {/*<Button variant="outline">
                     <Edit className="h-5 w-5 mr-2" />
                     Update
-                  </Button>
+                  </Button>*/}
                 </div>
               </div>
               <div className="mb-6">
@@ -364,11 +381,47 @@ export default function Game({ game }: { game: GameType }) {
                   <div className="flex items-center space-x-2 mb-2">
                     <img
                       className="w-8 h-8 rounded-full"
-                      src="/placeholder.svg"
+                      src="/placeholder.png"
                     />
-                    <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
-                      @{expandedReview.user.username}
-                    </p>
+                    <div className="flex items-center justify-between w-full">
+                      <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
+                        @{expandedReview.user.username}
+                      </p>
+                      <TooltipProvider delayDuration={100}>
+                        <div className="flex items-center space-x-2 ml-auto">
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <div className="flex items-center">
+                                {[...Array(5)].map((_, index) => (
+                                  <Star
+                                    key={index}
+                                    className={`h-5 w-5 ${
+                                      index <
+                                      Math.round(
+                                        (expandedReview.rating ?? 0) / 2,
+                                      )
+                                        ? "text-yellow-500"
+                                        : "text-neutral-400"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Rated {expandedReview.rating ?? 0}/10
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              {expandedReview.mastered && (
+                                <TrophyIcon className="w-4 h-4" />
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>Mastered</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
+                    </div>
                   </div>
                   <p
                     className="prose dark:prose-invert max-w-full"
@@ -409,14 +462,48 @@ export default function Game({ game }: { game: GameType }) {
                         className="break-inside-avoid rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50 mb-4"
                         key={review.id}
                       >
-                        <div className="flex items-center space-x-2 mb-2">
-                          <img
-                            className="w-8 h-8 rounded-full"
-                            src="/placeholder.svg"
-                          />
-                          <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
-                            @{review.user.username}
-                          </p>
+                        <div className="flex items-center mb-2">
+                          <div className="flex items-center space-x-2">
+                            <img
+                              className="w-8 h-8 rounded-full"
+                              src="/placeholder.png"
+                            />
+                            <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
+                              @{review.user.username}
+                            </p>
+                          </div>
+                          <TooltipProvider delayDuration={100}>
+                            <div className="flex items-center space-x-2 ml-auto">
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <div className="flex items-center">
+                                    {[...Array(5)].map((_, index) => (
+                                      <Star
+                                        key={index}
+                                        className={`h-5 w-5 ${
+                                          index <
+                                          Math.round((review.rating ?? 0) / 2)
+                                            ? "text-yellow-500"
+                                            : "text-neutral-400"
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Rated {review.rating ?? 0}/10
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  {review.mastered && (
+                                    <TrophyIcon className="w-4 h-4" />
+                                  )}
+                                </TooltipTrigger>
+                                <TooltipContent>Mastered</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
                         </div>
                         <p
                           className="text-sm text-neutral-600 dark:text-neutral-400 mb-2"

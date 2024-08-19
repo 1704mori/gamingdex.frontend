@@ -34,6 +34,7 @@ export interface GameType {
   year: string;
   status: GameStatus;
   description?: string;
+  score: number;
   links?: Record<string, string>;
   originalLanguage?: Language;
   slug?: string;

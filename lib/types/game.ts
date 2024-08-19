@@ -63,7 +63,31 @@ export interface GameReview {
   game: GameType;
   user: User;
   platform: Platform;
+  likes: ReviewLike[];
+  comments: ReviewComment[];
 }
+
+export type ReviewLike = {
+  id: string;
+  review_id: string;
+  user_id: string;
+  created_at: string;
+
+  review: GameReview;
+  user: User;
+};
+
+export type ReviewComment = {
+  id: string;
+  review_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+
+  review: GameReview;
+  user: User;
+};
 
 export const GAME_RATINGS = {
   1: "Unplayable",

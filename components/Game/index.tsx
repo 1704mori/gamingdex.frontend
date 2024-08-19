@@ -4,6 +4,7 @@ import { GameReview, GameType } from "@/lib/types/game";
 import Image from "next/image";
 import {
   API_URL,
+  cn,
   getCookie,
   markdownToHtml,
   shimmer,
@@ -20,13 +21,18 @@ import {
   NotebookPenIcon,
   GamepadIcon,
   PlayIcon,
+  HeartIcon,
+  MessageSquareIcon,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog";
 import AddToLibrary from "./addtolibrary";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "../ui/skeleton";
 import { useState } from "react";
+import { useAtom } from "jotai";
+import { userAtom } from "@/lib/stores/user";
+import { CommentsSection } from "./CommentsSection";
 
 function platformToIcon(platform: string) {
   if (
@@ -47,17 +53,20 @@ function platformToIcon(platform: string) {
 }
 
 export default function Game({ game }: { game: GameType }) {
+  const [user] = useAtom(userAtom);
   const [expandedReview, setExpandedReview] = useState<GameReview | null>(null);
 
   const handleBackClick = () => {
     setExpandedReview(null);
   };
 
+  const qc = useQueryClient();
+
   const { data: reviewsData, isLoading: isReviewsLoading } = useQuery({
     queryKey: ["game_reviews", game.id],
     queryFn: async () => {
       const response = await fetch(
-        `${API_URL}/reviews?limit=6&game_id=${game.id}&order_by=created_at asc&includes=platform,user`,
+        `${API_URL}/reviews?limit=6&game_id=${game.id}&order_by=created_at asc&includes=platform,user,comments,likes`,
         {
           headers: {
             Authorization: `Bearer ${getCookie("gd:accessToken")}`,
@@ -67,6 +76,44 @@ export default function Game({ game }: { game: GameType }) {
       return response.json<GameReview[]>();
     },
   });
+
+  const likeReview = useMutation({
+    mutationFn: async (reviewId: string) => {
+      const response = await fetch(`${API_URL}/reviews/${reviewId}/like`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to like the review");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["game_reviews", game.id] });
+    },
+  });
+
+  const unlikeReview = useMutation({
+    mutationFn: async (reviewId: string) => {
+      const response = await fetch(`${API_URL}/reviews/${reviewId}/like`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to unlike the review");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["game_reviews", game.id] });
+    },
+  });
+
+  const handleLikeToggle = (review: GameReview) => {
+    if (review.likes.find((like) => like.user_id == user?.id)) {
+      unlikeReview.mutate(review.id);
+    } else {
+      likeReview.mutate(review.id);
+    }
+  };
 
   return (
     <main className="flex flex-col">
@@ -312,22 +359,25 @@ export default function Game({ game }: { game: GameType }) {
               <Button variant="outline" onClick={handleBackClick}>
                 Back to All Reviews
               </Button>
-              <div className="rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50">
-                <div className="flex items-center space-x-2 mb-2">
-                  <img
-                    className="w-8 h-8 rounded-full"
-                    src="/placeholder.svg"
-                  />
-                  <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
-                    @{expandedReview.user.username}
-                  </p>
+              <div className="grid md:grid-cols-[1fr_26rem] gap-4">
+                <div className="rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <img
+                      className="w-8 h-8 rounded-full"
+                      src="/placeholder.svg"
+                    />
+                    <p className="text-sm font-medium text-neutral-900 dark:text-neutral-50">
+                      @{expandedReview.user.username}
+                    </p>
+                  </div>
+                  <p
+                    className="prose dark:prose-invert max-w-full"
+                    dangerouslySetInnerHTML={{
+                      __html: markdownToHtml(expandedReview.review_text!),
+                    }}
+                  ></p>
                 </div>
-                <p
-                  className="prose dark:prose-invert max-w-full"
-                  dangerouslySetInnerHTML={{
-                    __html: markdownToHtml(expandedReview.review_text!),
-                  }}
-                ></p>
+                <CommentsSection reviewId={expandedReview.id} />
               </div>
             </div>
           ) : (
@@ -374,15 +424,52 @@ export default function Game({ game }: { game: GameType }) {
                             __html: markdownToHtml(displayedText!),
                           }}
                         ></p>
-                        {isLongReview && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setExpandedReview(review)}
-                          >
-                            {expandedReview ? "Show Less" : "Read More"}
-                          </Button>
-                        )}
+
+                        <div className="flex items-center max-sm:gap-2 max-sm:flex-wrap">
+                          {isLongReview && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setExpandedReview(review)}
+                              className="max-sm:w-full"
+                            >
+                              {expandedReview ? "Show Less" : "Read More"}
+                            </Button>
+                          )}
+                          <div className="flex items-center gap-2 md:ml-auto">
+                            <button
+                              className="flex items-center gap-1"
+                              onClick={() =>
+                                handleLikeToggle(
+                                  expandedReview ? expandedReview : review,
+                                )
+                              }
+                            >
+                              <HeartIcon
+                                className={cn(
+                                  "w-5 h-5",
+                                  review.likes.find(
+                                    (like) => like.user_id == user?.id,
+                                  ) && "text-red-500",
+                                )}
+                              />
+                              {Intl.NumberFormat("en", {
+                                notation: "compact",
+                              }).format(review.likes.length ?? 0)}{" "}
+                              likes
+                            </button>
+                            <button
+                              className="flex items-center gap-1"
+                              onClick={() => setExpandedReview(review)}
+                            >
+                              <MessageSquareIcon className="w-5 h-5" />
+                              {Intl.NumberFormat("en", {
+                                notation: "compact",
+                              }).format(review.comments?.length ?? 0)}{" "}
+                              comments
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}

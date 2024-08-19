@@ -121,8 +121,13 @@ export default function AddToLibrary({ gameId }: { gameId: string }) {
 
   const mutation = useMutation({
     mutationFn: async (data: GameReviewFormData) => {
-      const response = await fetch(`${API_URL}/reviews/game/${gameId}`, {
-        method: "POST",
+      const method = selectedReviewId ? "PUT" : "POST";
+      const url = selectedReviewId
+        ? `${API_URL}/reviews/${selectedReviewId}`
+        : `${API_URL}/reviews/game/${gameId}`;
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${getCookie("gd:accessToken")}`,
@@ -130,12 +135,17 @@ export default function AddToLibrary({ gameId }: { gameId: string }) {
         body: JSON.stringify(data),
       });
 
-      const { result, message } = await response.json<GameReview>();
-      if (result == "error") {
-        toast.error(message);
+      const result = await response.json();
+      if (!response.ok) {
+        toast.error(result.message || "Something went wrong.");
         return;
       }
-      toast.success("Game logged successfully");
+      toast.success(
+        selectedReviewId
+          ? "Review updated successfully"
+          : "Game logged successfully",
+      );
+      refetchSelectedReview(); // Refetch the selected review if it was updated
     },
   });
 
@@ -248,7 +258,7 @@ export default function AddToLibrary({ gameId }: { gameId: string }) {
                       </SelectTrigger>
                       <SelectContent>
                         {data?.attributes.platforms.map((platform) => (
-                          <SelectItem value={platform.id}>
+                          <SelectItem key={platform.id} value={platform.id}>
                             {platform.name}
                           </SelectItem>
                         ))}

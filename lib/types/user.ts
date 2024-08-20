@@ -37,7 +37,7 @@ export interface User {
 
 export interface UserList {
   id: string;
-  userId: string;
+  user_id: string;
   name: string;
   description?: string;
   is_ranked: boolean;

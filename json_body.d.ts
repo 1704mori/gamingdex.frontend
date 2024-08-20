@@ -1,7 +1,7 @@
 interface Body {
-  json<T = unknown>(): Promise<{
+  json<T = unknown, E = any>(): Promise<{
     attributes: T;
-    pagination?: { total: number };
+    pagination?: E & { total: number };
     result: "ok" | "error";
     message?: string;
   }>;

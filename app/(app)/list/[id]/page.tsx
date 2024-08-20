@@ -24,6 +24,13 @@ import { ListOrdering, UserList } from "@/lib/types/user";
 import { API_URL, getCookie } from "@/lib/utils";
 import GameSearchInput from "@/components/List/gamesearchinput";
 import SortableItem from "@/components/List/sortableitem";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { InfoIcon } from "lucide-react";
 
 export type EditListType = {
   name?: string;
@@ -187,36 +194,64 @@ export default function EditGameListPage() {
                 <SelectItem value="custom">Custom</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isRanked"
-                checked={list.is_ranked}
-                onCheckedChange={(checked) =>
-                  setList((prev) => ({ ...prev, is_ranked: checked === true }))
-                }
-              />
-              <label
-                htmlFor="isRanked"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Ranked
-              </label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isPrivate"
-                checked={list.is_private}
-                onCheckedChange={(checked) =>
-                  setList((prev) => ({ ...prev, is_private: checked === true }))
-                }
-              />
-              <label
-                htmlFor="isPrivate"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Private
-              </label>
-            </div>
+            <TooltipProvider delayDuration={100}>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isRanked"
+                  checked={list.is_ranked}
+                  onCheckedChange={(checked) =>
+                    setList((prev) => ({
+                      ...prev,
+                      is_ranked: checked === true,
+                    }))
+                  }
+                />
+                <label
+                  htmlFor="isRanked"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Ranked
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <InfoIcon className="w-4 h-4 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      If enabled, this list will be ranked and numbered in
+                      ascending order.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isPrivate"
+                  checked={list.is_private}
+                  onCheckedChange={(checked) =>
+                    setList((prev) => ({
+                      ...prev,
+                      is_private: checked === true,
+                    }))
+                  }
+                />
+                <label
+                  htmlFor="isPrivate"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Private
+                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <InfoIcon className="w-4 h-4 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>If enabled, this list will only be visible to you.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           </div>
           <div>
             <Textarea
@@ -251,6 +286,10 @@ export default function EditGameListPage() {
             }
           />
 
+          <p className="text-sm text-neutral-400 font-medium">
+            Tip: Drag and drop games to reorder them. This will automatically
+            set your list to 'Custom' sorting.
+          </p>
           <DndContext onDragEnd={handleDragEnd}>
             <SortableContext
               items={list.games!.map((game) => game.game_id)}

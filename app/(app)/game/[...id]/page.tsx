@@ -12,6 +12,7 @@ export default async function GamePage({
     `${API_URL}/games/${id}?includes=platforms,genres,companies`,
   );
   const gameData = (await response.json()) as { attributes: GameType };
+  console.log(gameData.attributes.companies);
 
   return <Game game={gameData.attributes} />;
 }

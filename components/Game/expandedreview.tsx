@@ -83,6 +83,17 @@ export default function ExpandedReview({
     (like) => like.user_id == user?.id,
   );
 
+  const isLongReview = reviewData?.attributes?.review_text
+    ? reviewData?.attributes?.review_text.length > 150
+    : false;
+  const displayedText = isLongReview
+    ? reviewData?.attributes?.review_text
+      ? reviewData?.attributes?.review_text!.slice(0, 150) + "..."
+      : ""
+    : reviewData?.attributes?.review_text
+      ? reviewData?.attributes?.review_text
+      : "";
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -122,7 +133,8 @@ export default function ExpandedReview({
                             className={`h-5 w-5 ${
                               index <
                               Math.round(
-                                (reviewData?.attributes.rating ?? 0) / 2,
+                                (reviewData?.attributes?.user_game?.rating ??
+                                  0) / 2,
                               )
                                 ? "text-yellow-500"
                                 : "text-neutral-400"
@@ -132,12 +144,12 @@ export default function ExpandedReview({
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      Rated {reviewData?.attributes.rating ?? 0}/10
+                      Rated {reviewData?.attributes?.user_game?.rating ?? 0}/10
                     </TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger>
-                      {reviewData?.attributes.mastered && (
+                      {reviewData?.attributes?.user_game?.mastered && (
                         <TrophyIcon className="w-4 h-4" />
                       )}
                     </TooltipTrigger>
@@ -148,7 +160,7 @@ export default function ExpandedReview({
             </div>
           </div>
           <p
-            className="prose dark:prose-invert max-w-full"
+            className="prose dark:prose-invert break-words max-w-full"
             dangerouslySetInnerHTML={{
               __html: markdownToHtml(reviewData?.attributes.review_text ?? ""),
             }}

@@ -125,7 +125,7 @@ export default function Game({ game }: { game: GameType }) {
     queryKey: ["game_reviews", game.id],
     queryFn: async () => {
       const response = await fetch(
-        `${API_URL}/reviews?limit=6&game_id=${game.id}&order_by=created_at asc&includes=user,likes`,
+        `${API_URL}/reviews?limit=6&game_id=${game.id}&order_by=created_at asc&includes=user,user_game,likes`,
         {
           headers: {
             Authorization: `Bearer ${getCookie("gd:accessToken")}`,
@@ -504,7 +504,9 @@ export default function Game({ game }: { game: GameType }) {
                                       key={index}
                                       className={`h-5 w-5 ${
                                         index <
-                                        Math.round((review.rating ?? 0) / 2)
+                                        Math.round(
+                                          (review.user_game?.rating ?? 0) / 2,
+                                        )
                                           ? "text-yellow-500"
                                           : "text-neutral-400"
                                       }`}
@@ -513,12 +515,12 @@ export default function Game({ game }: { game: GameType }) {
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Rated {review.rating ?? 0}/10
+                                Rated {review?.user_game.rating ?? 0}/10
                               </TooltipContent>
                             </Tooltip>
                             <Tooltip>
                               <TooltipTrigger>
-                                {review.mastered && (
+                                {review?.user_game?.mastered && (
                                   <TrophyIcon className="w-4 h-4" />
                                 )}
                               </TooltipTrigger>
@@ -528,7 +530,7 @@ export default function Game({ game }: { game: GameType }) {
                         </TooltipProvider>
                       </div>
                       <p
-                        className="text-sm text-neutral-600 dark:text-neutral-400 mb-2"
+                        className="text-sm text-neutral-600 dark:text-neutral-400 mb-2 truncate max-w-40 lg:max-w-80"
                         dangerouslySetInnerHTML={{
                           __html: markdownToHtml(displayedText!),
                         }}

@@ -247,6 +247,13 @@ export default function Header() {
           >
             Profile
           </Link>
+          <Link
+            href="/list"
+            className="hover:text-neutral-300"
+            onClick={() => setIsNavDrawerOpen(false)}
+          >
+            Lists
+          </Link>
         </DrawerContent>
       </Drawer>
 

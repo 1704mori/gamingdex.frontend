@@ -352,16 +352,6 @@ export default function Home() {
                           }).format(review.likes.length ?? 0)}{" "}
                           likes
                         </button>
-                        <button
-                          className="flex items-center gap-1"
-                          onClick={() => setExpandedReview(review)}
-                        >
-                          <MessageSquareIcon className="w-5 h-5" />
-                          {Intl.NumberFormat("en", {
-                            notation: "compact",
-                          }).format(review.comments?.length ?? 0)}{" "}
-                          comments
-                        </button>
                       </div>
                     </div>
                   </div>

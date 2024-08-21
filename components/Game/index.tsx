@@ -11,7 +11,6 @@ import {
   toBase64,
 } from "@/lib/utils";
 import {
-  Edit,
   Flag,
   Gamepad2,
   Heart,
@@ -33,7 +32,6 @@ import { Skeleton } from "../ui/skeleton";
 import { useState } from "react";
 import { useAtom } from "jotai";
 import { userAtom } from "@/lib/stores/user";
-import { CommentsSection } from "./CommentsSection";
 import {
   Tooltip,
   TooltipContent,
@@ -488,16 +486,6 @@ export default function Game({ game }: { game: GameType }) {
                                 notation: "compact",
                               }).format(review.likes.length ?? 0)}{" "}
                               likes
-                            </button>
-                            <button
-                              className="flex items-center gap-1"
-                              onClick={() => setExpandedReview(review)}
-                            >
-                              <MessageSquareIcon className="w-5 h-5" />
-                              {Intl.NumberFormat("en", {
-                                notation: "compact",
-                              }).format(review.comments?.length ?? 0)}{" "}
-                              comments
                             </button>
                           </div>
                         </div>

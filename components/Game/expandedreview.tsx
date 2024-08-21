@@ -13,7 +13,6 @@ import {
   HeartIcon,
   ArrowLeft,
 } from "lucide-react";
-import { CommentsSection } from "./CommentsSection";
 import { API_URL, getCookie, markdownToHtml } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom } from "jotai";
@@ -97,10 +96,6 @@ export default function ExpandedReview({
               className={`w-5 h-5 mr-2 ${userHasLiked ? "text-red-500" : "text-neutral-500"}`}
             />
             {reviewData?.attributes.likes.length} Likes
-          </Button>
-          <Button variant="outline">
-            <MessageSquareIcon className="w-5 h-5 mr-2" />
-            {reviewData?.attributes.comments.length} Comments
           </Button>
         </div>
       </div>

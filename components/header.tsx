@@ -87,6 +87,9 @@ export default function Header() {
           <Link className="hover:text-neutral-300" href={`/user/${user?.id}`}>
             Profile
           </Link>
+          <Link className="hover:text-neutral-300" href="/list">
+            Lists
+          </Link>
         </nav>
       </div>
       <div className="flex items-center gap-4">

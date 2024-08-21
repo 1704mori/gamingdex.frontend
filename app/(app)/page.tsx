@@ -110,6 +110,44 @@ export default function Home() {
     }
   };
 
+  const likeList = useMutation({
+    mutationFn: async (listId: string) => {
+      const response = await fetch(`${API_URL}/list/${listId}/like`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to like the list");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["home_lists"] });
+    },
+  });
+
+  const unlikeList = useMutation({
+    mutationFn: async (listId: string) => {
+      const response = await fetch(`${API_URL}/list/${listId}/like`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to unlike the list");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["home_lists"] });
+    },
+  });
+
+  const handleLikeListToggle = (list: UserList) => {
+    if (list.likes.find((like) => like.user_id == user?.id)) {
+      unlikeList.mutate(list.id);
+    } else {
+      likeList.mutate(list.id);
+    }
+  };
+
   const isTabletOrMobile = useMediaQuery({ query: "(max-width: 768px)" });
 
   return (
@@ -386,6 +424,22 @@ export default function Home() {
                   <span className="text-neutral-600 dark:text-neutral-400">
                     {list.games_count} games
                   </span>
+                  <button
+                    className="flex items-center gap-1 ml-auto"
+                    onClick={() => handleLikeListToggle(list)}
+                  >
+                    <HeartIcon
+                      className={cn(
+                        "w-5 h-5",
+                        list.likes.find((like) => like.user_id == user?.id) &&
+                          "text-red-500",
+                      )}
+                    />
+                    {Intl.NumberFormat("en", {
+                      notation: "compact",
+                    }).format(list.likes.length ?? 0)}{" "}
+                    likes
+                  </button>
                 </p>
               </div>
             ))}

@@ -173,29 +173,31 @@ export default function Profile({ user }: { user: User }) {
             </h2>
           </div>
           <div className="grid grid-cols-1 gap-4 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800 p-2">
-            {user.reviews.map((review) => (
+            {user.user_games.map((userGame) => (
               <div
-                key={review.id}
+                key={userGame.id}
                 className="border border-neutral-200 dark:border-neutral-800 bg-neutral-200 text-neutral-50 dark:bg-neutral-900 dark:text-neutral-50 rounded-lg overflow-hidden shadow-md transition-transform duration-300 hover:-translate-y-1 grid grid-cols-[100px_1fr]"
               >
                 <Link href="" className="relative">
                   <Image
                     fill
-                    alt={review.game.title}
+                    alt={userGame.game.title}
                     className="absolute inset-0 w-full h-full object-cover"
-                    src={review.game.cover_url!}
+                    src={userGame.game.cover_url!}
                   />
                 </Link>
                 <div className="p-4">
                   <Link
-                    href={`/game/${review.game.id}`}
+                    href={`/game/${userGame.game.id}`}
                     className="hover:underline text-lg font-semibold mb-2 truncate max-w-64 block"
                   >
-                    {review.game.title}
+                    {userGame.game.title}
                   </Link>
                   <div className="flex items-center justify-between mt-2">
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Status: todo
+                      Status:{" "}
+                      {userGame.status.charAt(0).toUpperCase() +
+                        userGame.status.slice(1)}
                     </div>
                     <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
                       Score:
@@ -204,7 +206,7 @@ export default function Profile({ user }: { user: User }) {
                           <StarIcon
                             key={index}
                             className={`h-4 w-4 ${
-                              index < Math.round((review.rating ?? 0) / 2)
+                              index < Math.round((userGame.rating ?? 0) / 2)
                                 ? "text-yellow-500"
                                 : "text-neutral-400"
                             }`}

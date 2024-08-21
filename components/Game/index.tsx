@@ -179,7 +179,7 @@ export default function Game({ game }: { game: GameType }) {
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-500 text-white">
                       {game.score ?? "?"}
-                      <span className="ml-1 text-xs">/ 10</span>
+                      <span className="text-xs">/10</span>
                     </span>
                     {/* Star Icons */}
                     <div className="flex items-center">
@@ -201,7 +201,7 @@ export default function Game({ game }: { game: GameType }) {
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-500 text-white">
                       {game.score ?? "?"}
-                      <span className="ml-1 text-xs">/ 10</span>
+                      <span className="text-xs">/10</span>
                     </span>
                     {/* Star Icons */}
                     <div className="flex items-center">

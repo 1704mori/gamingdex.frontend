@@ -188,7 +188,7 @@ export default function Profile({ user }: { user: User }) {
                 </Link>
                 <div className="p-4">
                   <Link
-                    href=""
+                    href={`/game/${review.game.id}`}
                     className="hover:underline text-lg font-semibold mb-2 truncate max-w-64 block"
                   >
                     {review.game.title}

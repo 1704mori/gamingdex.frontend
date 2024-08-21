@@ -81,7 +81,7 @@ function Providers({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     deleteCookie("gd:accessToken");
     deleteCookie("gd:refreshToken");
-    router.push("/auth");
+    // router.push("/auth");
   };
 
   return <>{children}</>;

@@ -1,324 +1,205 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { DndContext } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { UserList } from "@/lib/types/user";
+import Image from "next/image";
+import { API_URL, cn, getCookie, shimmer, toBase64 } from "@/lib/utils";
+import { HeartIcon, LockIcon } from "lucide-react";
+import Link from "next/link";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectItem,
-  SelectTrigger,
-  SelectContent,
-  SelectValue,
-} from "@/components/ui/select";
-import { ListOrdering, UserList } from "@/lib/types/user";
-import { API_URL, getCookie } from "@/lib/utils";
-import GameSearchInput from "@/components/List/gamesearchinput";
-import SortableItem from "@/components/List/sortableitem";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { InfoIcon } from "lucide-react";
+import { useAtom } from "jotai";
+import { userAtom } from "@/lib/stores/user";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export type EditListType = {
-  name?: string;
-  description?: string;
-  is_ranked?: boolean;
-  is_private?: boolean;
-  ordering?: string;
-  games?: {
-    game_id: string;
-    note?: string;
-    order?: number;
-    game: { title: string; cover_url: string };
-  }[];
-};
-
-export default function EditGameListPage() {
+export default function ListDisplay({
+  params: { id },
+}: {
+  params: { id: string };
+}) {
   const router = useRouter();
-  const { id: listId } = useParams();
+  const queryClient = useQueryClient();
+  const [user] = useAtom(userAtom);
 
-  const [list, setList] = useState<EditListType | null>(null);
+  const {
+    data: listData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["list", id],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/list/${id}`);
+      return response.json<UserList>();
+    },
+  });
 
-  useEffect(() => {
-    if (listId) {
-      // Fetch the list data
-      fetch(`${API_URL}/list/${listId}`, {
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${API_URL}/list/${id}/like`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${getCookie("gd:accessToken")}`,
         },
-      })
-        .then((res) => res.json<UserList>())
-        .then(({ attributes: data }) => {
-          // Ensure the order is set for custom ordering
-          if (data.ordering === "custom") {
-            data.games = data.games.map((game, index: number) => ({
-              ...game,
-              order: index,
-            }));
-          }
-          setList({
-            ...data,
-            games: data.games.map((game) => ({
-              game_id: game.game_id,
-              note: game.note,
-              order: game.order,
-              game: {
-                title: game.game!.title!,
-                cover_url: game.game!.cover_url!,
-              },
-            })),
-          });
-        });
-    }
-  }, [listId]);
-
-  const handleDragEnd = (event: any) => {
-    const { active, over } = event;
-
-    if (active.id !== over.id) {
-      setList((prev) => {
-        if (!prev) return null;
-
-        const oldIndex = prev.games?.findIndex(
-          (game) => game.game_id === active.id,
-        );
-        const newIndex = prev.games?.findIndex(
-          (game) => game.game_id === over.id,
-        );
-
-        const newGames = arrayMove(prev.games!, oldIndex!, newIndex!).map(
-          (game, index) => ({
-            ...game,
-            order: index, // Atualiza a ordem automaticamente
-          }),
-        );
-
-        return {
-          ...prev,
-          games: newGames,
-          ordering: "custom", // Define a ordenação automaticamente para "custom" ao mover os cards
-        };
       });
+      if (!response.ok) throw new Error("Failed to like the list");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["list", id],
+      });
+    },
+  });
+
+  const unlikeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${API_URL}/list/${id}/like`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to unlike the list");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["list", id],
+      });
+    },
+  });
+
+  const didILike = listData?.attributes.likes.some(
+    (like) => like.user_id === user?.id,
+  );
+
+  const handleLikeToggle = () => {
+    if (didILike) {
+      unlikeMutation.mutate();
+    } else {
+      likeMutation.mutate();
     }
   };
 
-  const handleSave = async () => {
-    if (!list) return;
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8">
+        <Skeleton className="h-8 w-48 mb-4" />
+        <Skeleton className="h-6 w-32 mb-2" />
+        <Skeleton className="h-6 w-24" />
 
-    const response = await fetch(`${API_URL}/list/${listId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${getCookie("gd:accessToken")}`,
-      },
-      body: JSON.stringify(list),
-    });
-  };
-
-  const handleOrderingChange = (value: ListOrdering) => {
-    setList((prev) => {
-      if (!prev) return null;
-
-      const updatedGames =
-        value === "custom"
-          ? prev.games?.map((game, index) => ({
-              ...game,
-              order: index,
-            }))
-          : prev.games?.map((game) => ({
-              ...game,
-              order: undefined,
-            }));
-
-      return {
-        ...prev,
-        ordering: value,
-        games: updatedGames,
-      };
-    });
-  };
-
-  if (!list) {
-    return <p>Loading...</p>;
+        <div className="grid grid-cols-1 gap-6 mt-8">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={index}
+              className="relative border border-neutral-200 rounded-lg shadow-sm bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 overflow-hidden"
+            >
+              <div className="flex items-center gap-4 relative">
+                <Skeleton className="w-24 h-24 rounded-md" />
+                <Skeleton className="h-6 w-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <div className="container mx-auto p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Edit List: {list.name || "Untitled List"}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex max-sm:flex-col md:items-center gap-4">
-            <Input
-              type="text"
-              value={list.name}
-              onChange={(e) =>
-                setList((prev) => ({ ...prev, name: e.target.value }))
-              }
-              placeholder="List Name"
-            />
-            <Select value={list.ordering} onValueChange={handleOrderingChange}>
-              <SelectTrigger className="md:max-w-60">
-                <SelectValue>
-                  {list.ordering
-                    ? list.ordering === "alphabetical"
-                      ? "Alphabetical"
-                      : list.ordering === "release_date"
-                        ? "Release Date"
-                        : list.ordering === "user_rating"
-                          ? "User Rating"
-                          : list.ordering === "custom"
-                            ? "Custom"
-                            : "List Ordering"
-                    : "List Ordering"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="alphabetical">Alphabetical</SelectItem>
-                <SelectItem value="release_date">Release Date</SelectItem>
-                <SelectItem value="user_rating">User Rating</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-            <TooltipProvider delayDuration={100}>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isRanked"
-                  checked={list.is_ranked}
-                  onCheckedChange={(checked) =>
-                    setList((prev) => ({
-                      ...prev,
-                      is_ranked: checked === true,
-                    }))
-                  }
-                />
-                <label
-                  htmlFor="isRanked"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Ranked
-                </label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <InfoIcon className="w-4 h-4 cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>
-                      If enabled, this list will be ranked and numbered in
-                      ascending order.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+  if (error || !listData?.attributes) {
+    return <p>Failed to load list. Please try again later.</p>;
+  }
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isPrivate"
-                  checked={list.is_private}
-                  onCheckedChange={(checked) =>
-                    setList((prev) => ({
-                      ...prev,
-                      is_private: checked === true,
-                    }))
-                  }
-                />
-                <label
-                  htmlFor="isPrivate"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Private
-                </label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <InfoIcon className="w-4 h-4 cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>If enabled, this list will only be visible to you.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
-          </div>
-          <div>
-            <Textarea
-              value={list.description || ""}
-              onChange={(e) =>
-                setList((prev) => ({ ...prev, description: e.target.value }))
-              }
-              placeholder="List Description"
-            />
-          </div>
-
-          <GameSearchInput
-            onGameSelect={(game) =>
-              setList((prev) => ({
-                ...prev,
-                games: [
-                  ...prev?.games!,
-                  {
-                    game_id: game.id,
-                    note: "",
-                    game: {
-                      title: game.title,
-                      cover_url: game.cover_url!,
-                    },
-                    order:
-                      list.ordering === "custom"
-                        ? prev?.games!.length
-                        : undefined,
-                  },
-                ],
-              }))
-            }
-          />
-
-          <p className="text-sm text-neutral-400 font-medium">
-            Tip: Drag and drop games to reorder them. This will automatically
-            set your list to 'Custom' sorting.
+  if (
+    listData.attributes.is_private &&
+    listData.attributes.user_id !== user?.id
+  ) {
+    return (
+      <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8">
+        <div className="text-center">
+          <LockIcon className="w-12 h-12 mx-auto text-neutral-500 mb-4" />
+          <p className="text-xl font-semibold">This list is private.</p>
+          <p className="text-neutral-600 dark:text-neutral-400">
+            You don’t have permission to view this list.
           </p>
-          <DndContext onDragEnd={handleDragEnd}>
-            <SortableContext
-              items={list.games!.map((game) => game.game_id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {list.games!.length > 0 ? (
-                  list.games!.map((game) => (
-                    <SortableItem
-                      key={game.game_id}
-                      id={game.game_id}
-                      game={game}
-                      setList={setList}
-                    />
-                  ))
-                ) : (
-                  <p>Add some games</p>
-                )}
-              </div>
-            </SortableContext>
-          </DndContext>
+        </div>
+      </div>
+    );
+  }
 
-          <div className="mt-4 flex space-x-4">
-            <Button variant="default" onClick={handleSave}>
-              Save Changes
-            </Button>
+  const isCustomOrder = listData?.attributes.ordering === "custom";
+
+  return (
+    <div className="container mx-auto px-4 md:px-6 lg:px-8 py-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-4">
+            {listData?.attributes.name}
+          </h1>
+          <p className="text-neutral-600 dark:text-neutral-400">
+            Created by{" "}
+            <Link
+              href={`/user/${listData?.attributes.user?.id}`}
+              className="underline text-neutral-800 dark:text-neutral-200"
+            >
+              @{listData?.attributes.user?.username}
+            </Link>
+          </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <Button onClick={handleLikeToggle} variant="outline">
+            <HeartIcon
+              className={cn("w-5 h-5 mr-1", didILike && "text-red-500")}
+            />
+            {Intl.NumberFormat("en", { notation: "compact" }).format(
+              listData?.attributes.likes.length,
+            )}{" "}
+            Likes
+          </Button>
+        </div>
+      </div>
+      <span className="text-sm prose dark:prose-invert mt-4 break-words">
+        {listData.attributes.description}
+      </span>
+
+      <div className="grid grid-cols-1 gap-6 mt-8">
+        {listData?.attributes.games.map((game) => (
+          <div
+            className="relative border border-neutral-200 rounded-lg shadow-sm bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 overflow-hidden group"
+            key={game.id}
+          >
+            <Link
+              href={`/game/${game.game?.id}`}
+              className="flex items-center gap-4 relative"
+              onMouseDown={(e) => e.preventDefault()} // Prevent blur from triggering before navigation
+            >
+              <div className="relative w-24 h-24 min-w-[96px] min-h-[96px]">
+                <Image
+                  className="object-cover rounded-md"
+                  src={game.game?.cover_url!}
+                  alt={game.game?.title!}
+                  layout="fixed"
+                  width={96}
+                  height={96}
+                  placeholder="blur"
+                  blurDataURL={`data:image/svg+xml;base64,${toBase64(
+                    shimmer(96, 96),
+                  )}`}
+                />
+              </div>
+              <h3 className="font-semibold truncate">
+                {isCustomOrder || listData.attributes.is_ranked
+                  ? `${game.order + 1}. `
+                  : ""}
+                {game.game?.title}
+              </h3>
+            </Link>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
+
+      <div className="mt-8">
+        <Button variant="outline" onClick={() => router.back()}>
+          Go Back
+        </Button>
+      </div>
     </div>
   );
 }

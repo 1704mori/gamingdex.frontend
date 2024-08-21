@@ -16,9 +16,10 @@ export type Role =
   | "banned";
 
 export type ListOrdering =
-  | "alphabetical"
-  | "release_date"
-  | "user_rating"
+  | "title_asc"
+  | "title_desc"
+  | "year_asc"
+  | "year_desc"
   | "custom";
 
 export interface User {
@@ -46,7 +47,20 @@ export interface UserList {
   created_at: string;
   updated_at: string;
 
+  games_count: number;
+
   games: UserListGame[];
+  likes: UserListLikes[];
+  user?: User;
+}
+
+export interface UserListLikes {
+  id: string;
+  list_id: string;
+  user_id: string;
+  created_at: string;
+
+  list?: UserList;
   user?: User;
 }
 

@@ -1,13 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { API_URL, markdownToHtml, shimmer, toBase64 } from "@/lib/utils";
+import {
+  API_URL,
+  cn,
+  getCookie,
+  markdownToHtml,
+  shimmer,
+  toBase64,
+} from "@/lib/utils";
 import {
   Activity,
   GamepadIcon,
   NotebookPenIcon,
   PlusIcon,
   StarIcon,
+  HeartIcon,
+  MessageSquareIcon,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -16,7 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { GameReview } from "@/lib/types/game";
 import ExpandedReview from "@/components/Game/expandedreview";
 import { useState } from "react";
@@ -28,8 +37,8 @@ import { useMediaQuery } from "react-responsive";
 
 export default function Home() {
   const [user] = useAtom(userAtom);
-
   const [expandedReview, setExpandedReview] = useState<GameReview | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: recentGames, isLoading: isRecentGamesLoading } = useQuery({
     enabled: !!user?.id,
@@ -58,19 +67,47 @@ export default function Home() {
   const { data: listsData, isLoading: isListsLoading } = useQuery({
     queryKey: ["home_lists"],
     queryFn: async () => {
-      const response = await fetch(
-        `${API_URL}/list?limit=3&game_limit=5&games_count=true&order_by=likes&includes=games,likes,user`,
-      );
-      return response.json<UserList[], { games_count: number }>();
+      const response = await fetch(`${API_URL}/list/popular`);
+      return response.json<UserList[]>();
     },
   });
 
-  const handleBackClick = () => {
-    setExpandedReview(null);
-  };
+  const likeReview = useMutation({
+    mutationFn: async (reviewId: string) => {
+      const response = await fetch(`${API_URL}/reviews/${reviewId}/like`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to like the review");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["home_reviews"] });
+    },
+  });
+
+  const unlikeReview = useMutation({
+    mutationFn: async (reviewId: string) => {
+      const response = await fetch(`${API_URL}/reviews/${reviewId}/like`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to unlike the review");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["home_reviews"] });
+    },
+  });
 
   const handleLikeToggle = (review: GameReview) => {
-    // Your logic to handle the like toggle action here
+    if (review.likes.find((like) => like.user_id == user?.id)) {
+      unlikeReview.mutate(review.id);
+    } else {
+      likeReview.mutate(review.id);
+    }
   };
 
   const isTabletOrMobile = useMediaQuery({ query: "(max-width: 768px)" });
@@ -144,7 +181,9 @@ export default function Home() {
                       className="object-cover"
                       alt={game.title}
                       src={game.cover_url!}
-                      placeholder={`data:image/svg+xml;base64,${toBase64(shimmer(500, 300))}`}
+                      placeholder={`data:image/svg+xml;base64,${toBase64(
+                        shimmer(500, 300),
+                      )}`}
                       fill
                     />
                   </Link>
@@ -163,10 +202,10 @@ export default function Home() {
           {expandedReview ? (
             <ExpandedReview
               review={expandedReview}
-              onBackClick={handleBackClick}
+              onBackClick={() => setExpandedReview(null)}
               onLikeToggle={() => handleLikeToggle(expandedReview)}
               userHasLiked={expandedReview.likes.some(
-                (like) => like.user_id === "your-user-id", // Replace "your-user-id" with actual logic for current user ID
+                (like) => like.user_id === user?.id,
               )}
             />
           ) : (
@@ -233,15 +272,47 @@ export default function Home() {
                       }}
                     ></p>
 
-                    {isLongReview && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setExpandedReview(review)}
-                      >
-                        Read More
-                      </Button>
-                    )}
+                    <div className="flex items-center max-sm:gap-2 max-sm:flex-wrap">
+                      {isLongReview && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setExpandedReview(review)}
+                          className="max-sm:w-full"
+                        >
+                          {expandedReview ? "Show Less" : "Read More"}
+                        </Button>
+                      )}
+                      <div className="flex items-center gap-2 md:ml-auto">
+                        <button
+                          className="flex items-center gap-1"
+                          onClick={() => handleLikeToggle(review)}
+                        >
+                          <HeartIcon
+                            className={cn(
+                              "w-5 h-5",
+                              review.likes.find(
+                                (like) => like.user_id == user?.id,
+                              ) && "text-red-500",
+                            )}
+                          />
+                          {Intl.NumberFormat("en", {
+                            notation: "compact",
+                          }).format(review.likes.length ?? 0)}{" "}
+                          likes
+                        </button>
+                        <button
+                          className="flex items-center gap-1"
+                          onClick={() => setExpandedReview(review)}
+                        >
+                          <MessageSquareIcon className="w-5 h-5" />
+                          {Intl.NumberFormat("en", {
+                            notation: "compact",
+                          }).format(review.comments?.length ?? 0)}{" "}
+                          comments
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -261,25 +332,32 @@ export default function Home() {
                 className="rounded-lg p-4 border border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50"
               >
                 <Link
-                  href=""
+                  href={`/list/${list.id}`}
                   className="flex justify-end sm:justify-start lg:justify-end xl:justify-start -space-x-2"
                 >
                   {list.games.map((game) => (
                     <div
-                      //div={`/game/${game.game_id}`}
                       className="relative overflow-hidden rounded-lg block w-full h-24 border border-black/50"
+                      key={game.game_id}
                     >
                       <Image
                         className="object-cover"
                         alt={game.game?.title!}
                         src={game.game?.cover_url!}
-                        placeholder={`data:image/svg+xml;base64,${toBase64(shimmer(500, 300))}`}
+                        placeholder={`data:image/svg+xml;base64,${toBase64(
+                          shimmer(500, 300),
+                        )}`}
                         fill
                       />
                     </div>
                   ))}
                 </Link>
-                <h3 className="text-lg mt-1 font-semibold">nome ai karaio</h3>
+                <Link
+                  href={`/list/${list.id}`}
+                  className="text-lg mt-1 font-semibold"
+                >
+                  {list.name}
+                </Link>
                 <p className="flex items-center gap-1">
                   <p className="text-neutral-600 dark:text-neutral-400">by</p>
                   <Link href={`/user/${list.user?.id}`}>
@@ -288,12 +366,8 @@ export default function Home() {
                   <span className="text-neutral-600 dark:text-neutral-400">
                     -
                   </span>
-                  <span
-                    className="
-text-neutral-600 dark:text-neutral-400
-                    "
-                  >
-                    {listsData.pagination?.games_count} games
+                  <span className="text-neutral-600 dark:text-neutral-400">
+                    {list.games_count} games
                   </span>
                 </p>
               </div>

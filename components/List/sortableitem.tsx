@@ -40,7 +40,7 @@ export default function SortableItem({
   const handleRemoveGame = () => {
     setList((prev) => ({
       ...prev,
-      games: prev.games!.filter((g) => g.game_id !== game.game_id),
+      games: prev?.games!.filter((g) => g.game_id !== game.game_id),
     }));
   };
 

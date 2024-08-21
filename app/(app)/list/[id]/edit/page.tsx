@@ -31,20 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { InfoIcon } from "lucide-react";
-
-export type EditListType = {
-  name?: string;
-  description?: string;
-  is_ranked?: boolean;
-  is_private?: boolean;
-  ordering?: string;
-  games?: {
-    game_id: string;
-    note?: string;
-    order?: number;
-    game: { title: string; cover_url: string };
-  }[];
-};
+import { EditListType } from "@/components/List/create";
 
 export default function EditGameListPage() {
   const router = useRouter();

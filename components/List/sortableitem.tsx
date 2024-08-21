@@ -8,11 +8,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CreateListType } from "./create";
+import { CreateListType, EditListType } from "./create";
 import { XIcon, PencilIcon } from "lucide-react"; // Assuming you're using Lucide icons
 import { Textarea } from "../ui/textarea";
 import useHover from "@/lib/hooks/useHover";
-import { EditListType } from "@/app/(app)/list/[id]/page";
 
 export default function SortableItem({
   id,

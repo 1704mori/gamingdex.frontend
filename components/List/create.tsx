@@ -46,6 +46,20 @@ export type CreateListType = {
   }[];
 };
 
+export type EditListType = {
+  name?: string;
+  description?: string;
+  is_ranked?: boolean;
+  is_private?: boolean;
+  ordering?: string;
+  games?: {
+    game_id: string;
+    note?: string;
+    order?: number;
+    game: { title: string; cover_url: string };
+  }[];
+};
+
 export default function CreateGameListPage() {
   const [list, setList] = useState<CreateListType>({
     userId: "",

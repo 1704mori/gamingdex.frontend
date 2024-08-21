@@ -258,10 +258,6 @@ export default function Home() {
             <ExpandedReview
               review={expandedReview}
               onBackClick={() => setExpandedReview(null)}
-              onLikeToggle={() => handleLikeToggle(expandedReview)}
-              userHasLiked={expandedReview.likes.some(
-                (like) => like.user_id === user?.id,
-              )}
             />
           ) : (
             <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">

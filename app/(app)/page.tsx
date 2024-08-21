@@ -115,83 +115,100 @@ export default function Home() {
   return (
     <main className="flex flex-col">
       <section className="flex flex-col gap-4 py-12 bg-neutral-950 text-neutral-50">
-        <div className="flex items-center space-x-4 p-2 w-fit rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
-          <Activity className="h-5 w-5 mr-2" />
-          Activity Log
-        </div>
+        {user?.id ? (
+          <>
+            <div className="flex items-center space-x-4 p-2 w-fit rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
+              <Activity className="h-5 w-5 mr-2" />
+              Activity Log
+            </div>
 
-        <div className="flex flex-col self-start gap-4 w-full">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center space-x-2 py-1 px-3 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
-              <GamepadIcon />
-              <div>
-                <p className="text-sm font-medium">
-                  {Intl.NumberFormat("en", {
-                    notation: "compact",
-                  }).format(recentGames?.pagination?.games_in_library!)}{" "}
-                  games in library
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2 py-1 px-3 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
-              <NotebookPenIcon />
-              <div>
-                <p className="text-sm font-medium">
-                  {" "}
-                  {Intl.NumberFormat("en", {
-                    notation: "compact",
-                  }).format(recentGames?.pagination?.reviews_written!)}{" "}
-                  reviews written
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            {isTabletOrMobile ? (
-              <div className="grid grid-cols-2 gap-4 w-full">
-                {recentGames?.attributes.map(({ game }) => (
-                  <div
-                    className="w-full relative rounded-md border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50 overflow-hidden group"
-                    key={game.id}
-                  >
-                    <Link
-                      href={`/game/${game.id}`}
-                      className="flex items-center gap-2 relative"
-                      onMouseDown={(e) => e.preventDefault()} // Prevent blur from triggering before navigation
-                    >
-                      <img
-                        className="object-cover w-14 h-14"
-                        src={game.cover_url!}
-                        alt={game.title}
-                      />
-                      <h3 className="font-semibold truncate">{game.title}</h3>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            ) : (
+            <div className="flex flex-col self-start gap-4 w-full">
               <div className="flex items-center gap-2">
-                {recentGames?.attributes.map(({ game }) => (
-                  <Link
-                    href={`/game/${game.id}`}
-                    className="relative overflow-hidden rounded-lg block w-28 h-28"
-                    key={game.id}
-                  >
-                    <Image
-                      className="object-cover"
-                      alt={game.title}
-                      src={game.cover_url!}
-                      placeholder={`data:image/svg+xml;base64,${toBase64(
-                        shimmer(500, 300),
-                      )}`}
-                      fill
-                    />
-                  </Link>
-                ))}
+                <div className="flex items-center space-x-2 py-1 px-3 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
+                  <GamepadIcon />
+                  <div>
+                    <p className="text-sm font-medium">
+                      {Intl.NumberFormat("en", {
+                        notation: "compact",
+                      }).format(
+                        recentGames?.pagination?.games_in_library!,
+                      )}{" "}
+                      games in library
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 py-1 px-3 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
+                  <NotebookPenIcon />
+                  <div>
+                    <p className="text-sm font-medium">
+                      {" "}
+                      {Intl.NumberFormat("en", {
+                        notation: "compact",
+                      }).format(recentGames?.pagination?.reviews_written!)}{" "}
+                      reviews written
+                    </p>
+                  </div>
+                </div>
               </div>
-            )}
+              <div className="flex flex-col gap-2">
+                {isTabletOrMobile ? (
+                  <div className="grid grid-cols-2 gap-4 w-full">
+                    {recentGames?.attributes.map(({ game }) => (
+                      <div
+                        className="w-full relative rounded-md border-neutral-200 bg-neutral-200 text-neutral-950 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-50 overflow-hidden group"
+                        key={game.id}
+                      >
+                        <Link
+                          href={`/game/${game.id}`}
+                          className="flex items-center gap-2 relative"
+                          onMouseDown={(e) => e.preventDefault()} // Prevent blur from triggering before navigation
+                        >
+                          <img
+                            className="object-cover w-14 h-14"
+                            src={game.cover_url!}
+                            alt={game.title}
+                          />
+                          <h3 className="font-semibold truncate">
+                            {game.title}
+                          </h3>
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {recentGames?.attributes.map(({ game }) => (
+                      <Link
+                        href={`/game/${game.id}`}
+                        className="relative overflow-hidden rounded-lg block w-28 h-28"
+                        key={game.id}
+                      >
+                        <Image
+                          className="object-cover"
+                          alt={game.title}
+                          src={game.cover_url!}
+                          placeholder={`data:image/svg+xml;base64,${toBase64(
+                            shimmer(500, 300),
+                          )}`}
+                          fill
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div>
+            <h3 className="text-2xl tracking-normal font-semibold">
+              Join us and start your journey
+            </h3>
+            <Button className="mt-4" asChild>
+              <Link href="/auth">Start</Link>
+            </Button>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Popular Reviews */}

@@ -3,19 +3,21 @@
 import {
   DropdownMenuTrigger,
   DropdownMenuItem,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuSub,
   DropdownMenuSeparator,
   DropdownMenuContent,
   DropdownMenu,
 } from "@/components/ui/dropdown-menu";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { GamepadIcon, UserIcon, MenuIcon } from "lucide-react";
+import {
+  GamepadIcon,
+  UserIcon,
+  MenuIcon,
+  SearchIcon,
+  LogOutIcon,
+} from "lucide-react";
 
 import Link from "next/link";
 
@@ -28,16 +30,20 @@ import { useQuery } from "@tanstack/react-query";
 import { GameType } from "@/lib/types/game";
 import { useEffect, useRef, useState } from "react";
 import { useDebounceValue } from "@/lib/hooks/useDebounceValue";
+import { Drawer, DrawerContent, DrawerOverlay } from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
 
 export default function Header() {
   const [user] = useAtom(userAtom);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState(search);
+  const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
+  const [isSearchDrawerOpen, setIsSearchDrawerOpen] = useState(false);
 
-  const debouncedSearch = useDebounceValue(searchInput, 300); // 300ms delay
+  const debouncedSearch = useDebounceValue(searchInput, 300);
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setSearch(debouncedSearch);
@@ -53,7 +59,6 @@ export default function Header() {
   });
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    // Check if the blur is happening due to a click inside the dropdown
     if (
       dropdownRef.current &&
       (dropdownRef.current.contains(e.relatedTarget as Node) ||
@@ -61,42 +66,40 @@ export default function Header() {
     ) {
       return;
     }
-    // Reset the search input when focus is lost
     setSearchInput("");
     setSearch("");
   };
 
   return (
     <header className="flex justify-between items-center py-6 px-4 md:px-6 lg:px-8 bg-neutral-900 text-neutral-50 dark:bg-neutral-950 dark:text-neutral-50">
-      <div className="flex items-center">
-        <GamepadIcon className="h-8 w-8 mr-2" />
-        <h1 className="text-2xl font-bold">GamingDex</h1>
-        <nav className="hidden md:flex space-x-6 ml-6">
+      <div className="flex items-center gap-4">
+        <Link href="/" className="flex items-center">
+          <GamepadIcon className="h-8 w-8 mr-2" />
+          <h1 className="text-2xl font-bold">GamingDex</h1>
+        </Link>
+        <nav className="hidden md:flex space-x-6">
           <Link className="hover:text-neutral-300" href="/">
             Home
           </Link>
           <Link className="hover:text-neutral-300" href="/games">
             Games
           </Link>
-          <Link className="hover:text-neutral-300" href="#">
+          <Link className="hover:text-neutral-300" href={`/user/${user?.id}`}>
             Profile
-          </Link>
-          <Link className="hover:text-neutral-300" href="#">
-            About
           </Link>
         </nav>
       </div>
       <div className="flex items-center gap-4">
         <div
-          className="relative min-w-72 transition-all duration-300 focus-within:min-w-[500px]"
+          className="max-md:hidden relative w-64 transition-all duration-300 focus-within:w-80"
           ref={dropdownRef}
         >
           <Input
-            className="w-full transition-all duration-300 focus:w-[500px]"
+            className="max-md:hidden w-full transition-all duration-300"
             placeholder="Search"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            onBlur={handleBlur} // Reset search on blur
+            onBlur={handleBlur}
             ref={searchInputRef}
           />
           {search && (
@@ -127,7 +130,7 @@ export default function Header() {
                         onMouseDown={(e) => e.preventDefault()} // Prevent blur from triggering before navigation
                       >
                         <img
-                          className="object-cover w-14 h-14"
+                          className="object-cover min-w-14 max-w-[3.5rem] h-14"
                           src={game.cover_url!}
                           alt={game.title}
                         />
@@ -141,7 +144,7 @@ export default function Header() {
           )}
         </div>
 
-        <div className="flex items-center">
+        <div className="hidden md:flex items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -152,7 +155,7 @@ export default function Header() {
                 {user?.id && <p>{user?.username}</p>}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="p-6 mr-12 mt-4">
+            <DropdownMenuContent className="p-6 mt-4" align="end">
               {user?.id && (
                 <>
                   <DropdownMenuItem>
@@ -164,32 +167,20 @@ export default function Header() {
                         Settings
                       </DropdownMenuItem>
                     </DialogTrigger>
-
                     <EditUserDialog />
                   </Dialog>
                 </>
               )}
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger disabled>
-                  Interface Language
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem>English</DropdownMenuItem>
-                  <DropdownMenuItem>Chinese</DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
               <DropdownMenuSeparator />
               {user?.id ? (
-                <DropdownMenuItem>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      deleteCookie("gd:accessToken");
-                      deleteCookie("gd:refreshToken");
-                    }}
-                  >
-                    Sign Out
-                  </button>
+                <DropdownMenuItem
+                  onClick={() => {
+                    deleteCookie("gd:accessToken");
+                    deleteCookie("gd:refreshToken");
+                  }}
+                >
+                  <LogOutIcon className="mr-2 h-4 w-4" />
+                  Sign Out
                 </DropdownMenuItem>
               ) : (
                 <div className="flex flex-col gap-2 my-2">
@@ -203,13 +194,104 @@ export default function Header() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <div className="md:hidden">
-            <Button size="icon" variant="outline">
-              <MenuIcon className="h-6 w-6" />
-            </Button>
-          </div>
+        </div>
+
+        <div className="md:hidden flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => setIsSearchDrawerOpen(true)}
+          >
+            <SearchIcon className="h-6 w-6" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => setIsNavDrawerOpen(true)}
+          >
+            <MenuIcon className="h-6 w-6" />
+          </Button>
         </div>
       </div>
+
+      {/* Navigation Drawer for Mobile */}
+      <Drawer
+        fixed
+        direction="left"
+        open={isNavDrawerOpen}
+        onOpenChange={setIsNavDrawerOpen}
+      >
+        <DrawerOverlay />
+        <DrawerContent className="flex flex-col space-y-6 p-6 w-72 h-dvh">
+          <Link
+            href="/"
+            className="hover:text-neutral-300"
+            onClick={() => setIsNavDrawerOpen(false)}
+          >
+            Home
+          </Link>
+          <Link
+            href="/games"
+            className="hover:text-neutral-300"
+            onClick={() => setIsNavDrawerOpen(false)}
+          >
+            Games
+          </Link>
+          <Link
+            href={`/user/${user?.id}`}
+            className="hover:text-neutral-300"
+            onClick={() => setIsNavDrawerOpen(false)}
+          >
+            Profile
+          </Link>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Search Drawer for Mobile */}
+      <Drawer open={isSearchDrawerOpen} onOpenChange={setIsSearchDrawerOpen}>
+        <DrawerOverlay />
+        <DrawerContent className="flex flex-col space-y-6 p-6 w-full top-0">
+          <Input
+            placeholder="Search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full"
+          />
+          {search && (
+            <div className="flex flex-col gap-2 relative">
+              {isLoading ? (
+                <div className="space-y-2">
+                  {[...Array(4)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 overflow-hidden"
+                    >
+                      <Skeleton className="w-14 h-14" />
+                      <Skeleton className="h-6 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                games?.attributes?.map((game) => (
+                  <Link
+                    href={`/game/${game.id}`}
+                    className="flex items-center gap-2 border border-neutral-200 dark:border-neutral-800 bg-neutral-200 text-neutral-50 dark:bg-neutral-900 dark:text-neutral-50 rounded-lg overflow-hidden"
+                    key={game.id}
+                    onClick={() => setIsSearchDrawerOpen(false)}
+                  >
+                    <img
+                      className="object-cover w-14 h-14"
+                      src={game.cover_url!}
+                      alt={game.title}
+                    />
+                    <h3 className="font-semibold truncate">{game.title}</h3>
+                  </Link>
+                ))
+              )}
+            </div>
+          )}
+        </DrawerContent>
+      </Drawer>
     </header>
   );
 }

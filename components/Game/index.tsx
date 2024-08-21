@@ -203,7 +203,7 @@ export default function Game({ game }: { game: GameType }) {
                 </div>
               </div>
 
-              <p className="text-base mb-6 p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800 overflow-y-scroll max-h-48">
+              <p className="text-base mb-6 p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800 overflow-y-auto max-h-48">
                 {game.description}
               </p>
 

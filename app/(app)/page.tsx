@@ -58,7 +58,7 @@ export default function Home() {
     queryKey: ["home_reviews"],
     queryFn: async () => {
       const response = await fetch(
-        `${API_URL}/reviews?limit=6&order_by=likes&includes=platform,user,comments,likes,game`,
+        `${API_URL}/reviews?limit=6&order_by=likes&includes=user,user_game,likes,game`,
       );
       return response.json<GameReview[]>();
     },
@@ -262,10 +262,16 @@ export default function Home() {
           ) : (
             <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
               {reviewsData?.attributes.map((review) => {
-                const isLongReview = review.review_text!.length > 150;
+                const isLongReview = review.review_text
+                  ? review.review_text.length > 150
+                  : false;
                 const displayedText = isLongReview
-                  ? review.review_text!.slice(0, 150) + "..."
-                  : review.review_text;
+                  ? review.review_text
+                    ? review.review_text!.slice(0, 150) + "..."
+                    : ""
+                  : review.review_text
+                    ? review.review_text
+                    : "";
 
                 return (
                   <div
@@ -301,7 +307,9 @@ export default function Home() {
                                     key={index}
                                     className={`h-5 w-5 ${
                                       index <
-                                      Math.round((review.rating ?? 0) / 2)
+                                      Math.round(
+                                        (review.user_game?.rating ?? 0) / 2,
+                                      )
                                         ? "text-yellow-500"
                                         : "text-neutral-400"
                                     }`}
@@ -310,7 +318,7 @@ export default function Home() {
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              Rated {review.rating ?? 0}/10
+                              Rated {review.user_game?.rating ?? 0}/10
                             </TooltipContent>
                           </Tooltip>
                         </div>

@@ -52,9 +52,30 @@ export interface GameReview {
   id: string;
   gameId: string;
   userId: string;
-  rating: number;
   review_text?: string;
+  created_at: Date;
+  updated_at: Date;
+
+  game: GameType;
+  user_game: UserGame;
+  user: User;
+  likes: ReviewLike[];
+}
+
+export type UserGameStatus =
+  | "completed"
+  | "playing"
+  | "on_hold"
+  | "dropped"
+  | "plan_to_play";
+
+export interface UserGame {
+  id: string;
+  gameId: string;
+  userId: string;
+  rating: number;
   mastered: boolean;
+  status: UserGameStatus;
   start_date?: string;
   end_date?: string;
   played_on: string;
@@ -64,8 +85,6 @@ export interface GameReview {
   game: GameType;
   user: User;
   platform: Platform;
-  likes: ReviewLike[];
-  comments: ReviewComment[];
 }
 
 export type ReviewLike = {

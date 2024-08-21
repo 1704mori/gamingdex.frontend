@@ -84,9 +84,11 @@ export default function Header() {
           <Link className="hover:text-neutral-300" href="/games">
             Games
           </Link>
-          <Link className="hover:text-neutral-300" href={`/user/${user?.id}`}>
-            Profile
-          </Link>
+          {user?.id && (
+            <Link className="hover:text-neutral-300" href={`/user/${user?.id}`}>
+              Profile
+            </Link>
+          )}
           <Link className="hover:text-neutral-300" href="/list">
             Lists
           </Link>

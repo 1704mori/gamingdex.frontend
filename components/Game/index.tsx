@@ -1,6 +1,6 @@
 "use client";
 
-import { GameReview, GameType } from "@/lib/types/game";
+import { GameReview, GameType, UserGame } from "@/lib/types/game";
 import Image from "next/image";
 import {
   API_URL,
@@ -11,15 +11,15 @@ import {
   toBase64,
 } from "@/lib/utils";
 import {
-  Flag,
   Gamepad2,
-  Heart,
   Monitor,
   Smartphone,
   Star,
   HeartIcon,
   TrophyIcon,
   FlagIcon,
+  TrashIcon,
+  NotebookIcon,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog";
@@ -37,6 +37,8 @@ import {
 } from "../ui/tooltip";
 import ReportDialog from "../report";
 import ExpandedReview from "./expandedreview";
+import AddReview from "./addreview";
+import { toast } from "sonner";
 
 function platformToIcon(platform: string) {
   if (
@@ -57,9 +59,9 @@ function platformToIcon(platform: string) {
 }
 
 export default function Game({ game }: { game: GameType }) {
-  console.log("game", game);
   const [user] = useAtom(userAtom);
   const [expandedReview, setExpandedReview] = useState<GameReview | null>(null);
+  const [openReviewDialog, setOpenReviewDialog] = useState(false);
 
   const handleBackClick = () => {
     setExpandedReview(null);
@@ -67,11 +69,79 @@ export default function Game({ game }: { game: GameType }) {
 
   const qc = useQueryClient();
 
+  const { data: libraryStatus } = useQuery({
+    queryKey: ["game_status", game.id],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/games/${game.id}/library`, {
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      return response.json<UserGame>();
+    },
+    enabled: !!user?.id,
+  });
+
+  const removeFromLibrary = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${API_URL}/games/${game.id}/library`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      if (!response.ok)
+        throw new Error("Failed to remove the game from your library");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["game_status", game.id] });
+    },
+  });
+
+  const handleRemoveFromLibrary = () => {
+    removeFromLibrary.mutate();
+  };
+
+  const removeReview = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${API_URL}/reviews/${game.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+        },
+      });
+      if (!response.ok) throw new Error("Failed to remove your review");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["game_reviews", game.id] });
+    },
+  });
+
+  const handleRemoveReview = () => {
+    removeReview.mutate();
+  };
+
   const { data: reviewsData, isLoading: isReviewsLoading } = useQuery({
     queryKey: ["game_reviews", game.id],
     queryFn: async () => {
       const response = await fetch(
-        `${API_URL}/reviews?limit=6&game_id=${game.id}&order_by=created_at asc&includes=platform,user,comments,likes`,
+        `${API_URL}/reviews?limit=6&game_id=${game.id}&order_by=created_at asc&includes=user,likes`,
+        {
+          headers: {
+            Authorization: `Bearer ${getCookie("gd:accessToken")}`,
+          },
+        },
+      );
+      return response.json<GameReview[]>();
+    },
+  });
+
+  const { data: myReview, isLoading: isMyReviewLoading } = useQuery({
+    enabled: !!user?.id,
+    queryKey: ["game_reviews", game.id, user?.id],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API_URL}/reviews?limit=6&game_id=${game.id}&user_id=${user?.id}&order_by=created_at asc&includes=user,likes`,
         {
           headers: {
             Authorization: `Bearer ${getCookie("gd:accessToken")}`,
@@ -120,6 +190,14 @@ export default function Game({ game }: { game: GameType }) {
     }
   };
 
+  const handleWriteReviewClick = () => {
+    if (!libraryStatus?.attributes?.id) {
+      toast.error("You need to add the game to your library first.");
+      return;
+    }
+    setOpenReviewDialog(true);
+  };
+
   return (
     <main className="flex flex-col">
       <section className="w-full py-20 bg-neutral-900 text-neutral-50 dark:bg-neutral-950 dark:text-neutral-50">
@@ -149,11 +227,51 @@ export default function Game({ game }: { game: GameType }) {
             <div>
               <div className="flex flex-col lg:flex-row lg:items-center lg:gap-4 mb-4">
                 <h2 className="text-3xl font-bold">{game.title}</h2>
-                <div className="space-x-4">
+                <div className="flex items-center space-x-4">
+                  <div className="px-4 py-2 rounded-md bg-blue-500 text-white">
+                    {game.score ?? "?"}
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <p className="text-sm font-semibold">Your Rating</p>
+                    <div className="flex items-center gap-1">
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, index) => (
+                          <Star
+                            key={index}
+                            className={`h-5 w-5 ${
+                              index <
+                              Math.round(
+                                (libraryStatus?.attributes?.rating ?? 0) / 2,
+                              )
+                                ? "text-yellow-500"
+                                : "text-neutral-400"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="text-base font-medium">
+                        {libraryStatus?.attributes?.rating ?? "?"}/10
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex max-lg:flex-col lg:items-center gap-8 mb-4">
+                <div className="flex items-center flex-wrap gap-4">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button className="w-fit" variant="outline">
-                        <HeartIcon />
+                      <Button className="w-fit" variant="blue">
+                        <HeartIcon
+                          className={cn(
+                            "mr-2",
+                            libraryStatus?.attributes?.id
+                              ? "fill-white text-white"
+                              : "fill-white text-white",
+                          )}
+                        />
+                        {libraryStatus?.attributes?.id
+                          ? "Edit Entry"
+                          : "Add to My Library"}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="md:min-w-[48rem] max-sm:max-h-[48rem]">
@@ -161,62 +279,55 @@ export default function Game({ game }: { game: GameType }) {
                     </DialogContent>
                   </Dialog>
 
+                  <Button
+                    className="w-fit"
+                    variant="secondary"
+                    onClick={handleWriteReviewClick}
+                  >
+                    <NotebookIcon className={cn("mr-2")} />
+                    {myReview?.attributes?.[0]?.id
+                      ? "Edit Review"
+                      : "Write a Review"}
+                  </Button>
+
+                  {/* Controlled Dialog */}
+                  <Dialog
+                    open={openReviewDialog}
+                    onOpenChange={setOpenReviewDialog}
+                  >
+                    <DialogContent className="md:min-w-[48rem] max-sm:max-h-[48rem]">
+                      <AddReview gameId={game.id} />
+                    </DialogContent>
+                  </Dialog>
+
+                  {myReview?.attributes?.[0]?.id && (
+                    <Button variant="secondary" onClick={handleRemoveReview}>
+                      <TrashIcon className="mr-2" />
+                      Remove Review
+                    </Button>
+                  )}
+
+                  {libraryStatus?.attributes?.id && (
+                    <Button
+                      variant="secondary"
+                      onClick={handleRemoveFromLibrary}
+                    >
+                      <TrashIcon className="mr-2" />
+                      Remove from My Library
+                    </Button>
+                  )}
+
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button className="w-fit" variant="outline">
-                        <FlagIcon />
+                      <Button className="w-fit" variant="secondary">
+                        <FlagIcon className="mr-2" />
+                        Report
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <ReportDialog initialEntityType="game" data={game} />
                     </DialogContent>
                   </Dialog>
-                </div>
-              </div>
-              <div className="flex max-lg:flex-col lg:items-center gap-8 mb-4">
-                <div className="flex flex-col items-center p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
-                  <p className="text-lg font-semibold">GDEX Rating</p>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-500 text-white">
-                      {game.score ?? "?"}
-                      <span className="text-xs">/10</span>
-                    </span>
-                    {/* Star Icons */}
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, index) => (
-                        <Star
-                          key={index}
-                          className={`h-5 w-5 ${
-                            index < Math.round((game.score ?? 0) / 2)
-                              ? "text-yellow-500"
-                              : "text-neutral-400"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-center p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800">
-                  <p className="text-lg font-semibold">Your Rating</p>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-500 text-white">
-                      {game.score ?? "?"}
-                      <span className="text-xs">/10</span>
-                    </span>
-                    {/* Star Icons */}
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, index) => (
-                        <Star
-                          key={index}
-                          className={`h-5 w-5 ${
-                            index < Math.round((game.score ?? 0) / 2)
-                              ? "text-yellow-500"
-                              : "text-neutral-400"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </div>
               <p className="text-base mb-6 p-2 rounded-md border border-neutral-200 shadow-sm dark:border-neutral-800 overflow-y-auto max-h-48">
@@ -356,10 +467,17 @@ export default function Game({ game }: { game: GameType }) {
                 ))
               ) : reviewsData?.attributes.length! > 0 ? (
                 reviewsData?.attributes.map((review) => {
-                  const isLongReview = review.review_text!.length > 150;
+                  if (!review.review_text) return;
+                  const isLongReview = review.review_text
+                    ? review.review_text.length > 150
+                    : false;
                   const displayedText = isLongReview
-                    ? review.review_text!.slice(0, 150) + "..."
-                    : review.review_text;
+                    ? review.review_text
+                      ? review.review_text!.slice(0, 150) + "..."
+                      : ""
+                    : review.review_text
+                      ? review.review_text
+                      : "";
 
                   return (
                     <div

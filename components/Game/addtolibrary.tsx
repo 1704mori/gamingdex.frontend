@@ -10,59 +10,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon, StarIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { Checkbox } from "../ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Button } from "../ui/button";
 import { API_URL, cn, getCookie } from "@/lib/utils";
 import { Calendar } from "../ui/calendar";
 import { useEffect, useState } from "react";
-import ReviewEditor from "../ui/revieweditor";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useAtom } from "jotai";
+import { userAtom } from "@/lib/stores/user";
+import { GAME_RATINGS, GameType, UserGame } from "@/lib/types/game";
 import {
   DialogClose,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { GAME_RATINGS, GameReview, GameType } from "@/lib/types/game";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { toast } from "sonner";
-import { useAtom } from "jotai";
-import { userAtom } from "@/lib/stores/user";
 
-const gameReviewSchema = z.object({
-  rating: z
-    .number()
-    .min(0)
-    .max(10, { message: "Rating must be between 0 and 10" }),
-  mastered: z.boolean(),
-  played_on: z
-    .string()
-    .min(1, { message: "Please select when you played the game" }),
-  start_date: z.string().nullable(),
-  end_date: z.string().nullable(),
-  review_text: z.string().min(1, { message: "Please provide a review" }),
+const gameLibrarySchema = z.object({
+  rating: z.number().min(0).max(10).nullable(),
+  mastered: z.boolean().optional().default(false),
+  played_on: z.string().min(1),
+  status: z.string().min(1),
+  start_date: z.string().nullable().optional(),
+  end_date: z.string().nullable().optional(),
 });
 
-type GameReviewFormData = z.infer<typeof gameReviewSchema>;
+type GameLibraryFormData = z.infer<typeof gameLibrarySchema>;
 
 export default function AddToLibrary({ gameId }: { gameId: string }) {
   const [user] = useAtom(userAtom);
-  const [selectedReviewId, setSelectedReviewId] = useState("");
 
-  const form = useForm<GameReviewFormData>({
-    resolver: zodResolver(gameReviewSchema),
-  });
+  const [rating, setRating] = useState(0);
+  const [status, setStatus] = useState("");
+  const [playedOn, setPlayedOn] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [mastered, setMastered] = useState(false);
 
-  const { data } = useQuery({
+  const { data: gameData } = useQuery({
     queryKey: ["game_addlibrary", gameId],
     queryFn: async () => {
       const response = await fetch(
@@ -72,59 +60,43 @@ export default function AddToLibrary({ gameId }: { gameId: string }) {
     },
   });
 
-  const { data: reviewsData } = useQuery({
-    enabled: !!user?.id,
-    queryKey: ["game_reviews_addlibrary", gameId, user?.id],
+  const { data: libraryStatus } = useQuery({
+    queryKey: ["game_status", gameId],
     queryFn: async () => {
-      const response = await fetch(
-        `${API_URL}/reviews?game_id=${gameId}&includes=platform&user_id=${user?.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${getCookie("gd:accessToken")}`,
-          },
+      const response = await fetch(`${API_URL}/games/${gameId}/library`, {
+        headers: {
+          Authorization: `Bearer ${getCookie("gd:accessToken")}`,
         },
-      );
-      return response.json<GameReview[]>();
+      });
+
+      const result = await response.json<UserGame>();
+      setRating(result.attributes.rating);
+      setStatus(result.attributes.status);
+      setPlayedOn(result.attributes.played_on);
+      setStartDate(result.attributes.start_date!);
+      setEndDate(result.attributes.end_date!);
+      setMastered(result.attributes.mastered);
+
+      return result;
     },
+    refetchOnWindowFocus: false,
+    enabled: !!user?.id,
   });
 
-  const { data: selectedReviewData, refetch: refetchSelectedReview } = useQuery(
-    {
-      queryKey: ["selected_review", selectedReviewId],
-      queryFn: async () => {
-        if (!selectedReviewId) return null;
-        const response = await fetch(`${API_URL}/reviews/${selectedReviewId}`, {
-          headers: {
-            Authorization: `Bearer ${getCookie("gd:accessToken")}`,
-          },
-        });
-        return response.json<GameReview>();
-      },
-      enabled: !!selectedReviewId,
-    },
-  );
-
-  useEffect(() => {
-    if (selectedReviewData) {
-      form.reset({
-        rating: selectedReviewData.attributes.rating,
-        mastered: selectedReviewData.attributes.mastered,
-        played_on: selectedReviewData.attributes.platform.id,
-        start_date: selectedReviewData.attributes.start_date,
-        end_date: selectedReviewData.attributes.end_date,
-        review_text: selectedReviewData.attributes.review_text,
-      });
-    }
-  }, [selectedReviewData, form]);
-
-  const hasReview = reviewsData?.attributes?.[0]?.id;
-
   const mutation = useMutation({
-    mutationFn: async (data: GameReviewFormData) => {
-      const method = selectedReviewId ? "PUT" : "POST";
-      const url = selectedReviewId
-        ? `${API_URL}/reviews/${selectedReviewId}`
-        : `${API_URL}/reviews/game/${gameId}`;
+    mutationFn: async (data: GameLibraryFormData) => {
+      const url = libraryStatus
+        ? `${API_URL}/games/${gameId}/library`
+        : `${API_URL}/games/${gameId}/library`;
+      const method = libraryStatus?.attributes?.id ? "PUT" : "POST";
+
+      const payload: Partial<GameLibraryFormData> = {};
+      if (data.rating !== null) payload.rating = data.rating;
+      if (data.mastered !== undefined) payload.mastered = data.mastered;
+      if (data.played_on) payload.played_on = data.played_on;
+      if (data.status) payload.status = data.status;
+      if (data.start_date) payload.start_date = data.start_date;
+      if (data.end_date) payload.end_date = data.end_date;
 
       const response = await fetch(url, {
         method,
@@ -135,259 +107,177 @@ export default function AddToLibrary({ gameId }: { gameId: string }) {
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
       if (!response.ok) {
+        const result = await response.json();
         toast.error(result.message || "Something went wrong.");
         return;
       }
+
       toast.success(
-        selectedReviewId
-          ? "Review updated successfully"
-          : "Game logged successfully",
+        libraryStatus ? "Game updated successfully" : "Game added successfully",
       );
-      refetchSelectedReview(); // Refetch the selected review if it was updated
     },
   });
 
-  const onSubmit = (data: GameReviewFormData) => {
-    mutation.mutate(data);
+  const onSubmit = (e: any) => {
+    e.preventDefault();
+    mutation.mutate({
+      status,
+      rating,
+      played_on: playedOn,
+      start_date: startDate,
+      end_date: endDate,
+      mastered,
+    });
   };
 
   return (
     <>
-      <Form {...form}>
-        <DialogHeader>
+      <DialogHeader>
+        <DialogTitle>
+          {libraryStatus?.attributes?.id ? "Update" : "Add to"} library
+        </DialogTitle>
+      </DialogHeader>
+
+      <form onSubmit={onSubmit} className="flex flex-col gap-4 mt-2">
+        <div className="flex md:items-center justify-between max-sm:flex-col max-sm:gap-2">
           <div className="flex items-center gap-2">
-            <DialogTitle>
-              {selectedReviewId ? "Update" : "Add to"} library
-            </DialogTitle>
-            {hasReview && (
+            <div className="flex items-center gap-4">
               <Select
-                onValueChange={(value) => setSelectedReviewId(value)}
-                value={selectedReviewId}
+                onValueChange={(value) => setRating(Number(value))}
+                value={rating.toString()}
               >
-                <SelectTrigger className="w-52">
-                  <SelectValue placeholder="Update a review" />
+                <SelectTrigger className="w-[179px]">
+                  <SelectValue placeholder="Rating" />
                 </SelectTrigger>
                 <SelectContent>
-                  {reviewsData?.attributes.map((review) => (
-                    <SelectItem key={review.id} value={review.id}>
-                      {review.platform.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="1">Unplayable</SelectItem>
+                  <SelectItem value="2">Frustrating</SelectItem>
+                  <SelectItem value="3">Disappointing</SelectItem>
+                  <SelectItem value="4">Mediocre</SelectItem>
+                  <SelectItem value="5">Average</SelectItem>
+                  <SelectItem value="6">Decent</SelectItem>
+                  <SelectItem value="7">Good</SelectItem>
+                  <SelectItem value="8">Great</SelectItem>
+                  <SelectItem value="9">Excellent</SelectItem>
+                  <SelectItem value="10">Masterpiece</SelectItem>
                 </SelectContent>
               </Select>
-            )}
-          </div>
-        </DialogHeader>
-
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-4 mt-2"
-        >
-          <div className="flex md:items-center justify-between max-sm:flex-col max-sm:gap-2">
-            <div className="flex items-center gap-4">
-              <FormField
-                control={form.control}
-                name="rating"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Select
-                        onValueChange={(value) => field.onChange(Number(value))}
-                        value={field?.value?.toString()}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Rating" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(GAME_RATINGS).map(([rate, name]) => (
-                            <SelectItem key={rate} value={rate}>
-                              {name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex items-center">
-                {[...Array(5)].map((_, index) => (
-                  <StarIcon
-                    key={index}
-                    className={`h-5 w-5 ${
-                      index < Math.round((form.watch().rating ?? 0) / 2)
-                        ? "text-yellow-500"
-                        : "text-neutral-400"
-                    }`}
-                  />
-                ))}
-              </div>
             </div>
-            <FormField
-              control={form.control}
-              name="mastered"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Mastered</FormLabel>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
+            <div className="flex items-center gap-4">
+              <Select onValueChange={setStatus} value={status}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="playing">Playing</SelectItem>
+                  <SelectItem value="on_hold">On-Hold</SelectItem>
+                  <SelectItem value="dropped">Dropped</SelectItem>
+                  <SelectItem value="plan_to_play">Plan To Play</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <FormField
-              control={form.control}
-              name="played_on"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl className="w-full">
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="ww-[180px]">
-                        <SelectValue placeholder="Played on" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {data?.attributes.platforms.map((platform) => (
-                          <SelectItem key={platform.id} value={platform.id}>
-                            {platform.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+
+          <div className="flex items-center gap-1">
+            <Checkbox
+              id="mastered"
+              checked={mastered}
+              onCheckedChange={(state) => setMastered(state === true)}
             />
-            <FormField
-              control={form.control}
-              name="start_date"
-              render={({ field }) => (
-                <FormItem>
-                  <Popover modal={true}>
-                    <PopoverTrigger asChild>
-                      <FormControl className="w-full">
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "ww-[280px] justify-start text-left font-normal",
-                            !field.value && "text-muted-foreground",
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? (
-                            Intl.DateTimeFormat(undefined, {
-                              day: "2-digit",
-                              month: "long",
-                              year: "numeric",
-                            }).format(new Date(field.value))
-                          ) : (
-                            <span>Start Date</span>
-                          )}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={
-                          field.value ? new Date(field.value) : undefined
-                        }
-                        onSelect={(date) =>
-                          field.onChange(date?.toISOString() ?? null)
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="end_date"
-              render={({ field }) => (
-                <FormItem>
-                  <Popover modal={true}>
-                    <PopoverTrigger asChild>
-                      <FormControl className="w-full">
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "ww-[280px] justify-start text-left font-normal",
-                            !field.value && "text-muted-foreground",
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value ? (
-                            Intl.DateTimeFormat(undefined, {
-                              day: "2-digit",
-                              month: "long",
-                              year: "numeric",
-                            }).format(new Date(field.value))
-                          ) : (
-                            <span>End Date</span>
-                          )}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={
-                          field.value ? new Date(field.value) : undefined
-                        }
-                        onSelect={(date) =>
-                          field.onChange(date?.toISOString() ?? null)
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <label htmlFor="mastered">Mastered</label>
           </div>
-          <FormField
-            control={form.control}
-            name="review_text"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <ReviewEditor
-                    onChange={field.onChange}
-                    value={field.value}
-                    reload={!!field.value}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline-destructive" type="button">
-                Cancel
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {playedOn && (
+            <Select onValueChange={setPlayedOn} value={playedOn}>
+              <SelectTrigger className="ww-[180px]">
+                <SelectValue placeholder="Played on" />
+              </SelectTrigger>
+              <SelectContent>
+                {gameData?.attributes.platforms.map((platform) => (
+                  <SelectItem key={platform.id} value={platform.id}>
+                    {platform.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <Popover modal={true}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "ww-[280px] justify-start text-left font-normal",
+                  !startDate && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {startDate ? (
+                  Intl.DateTimeFormat(undefined, {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  }).format(new Date(startDate))
+                ) : (
+                  <span>Start Date</span>
+                )}
               </Button>
-            </DialogClose>
-            <Button type="submit" className="max-sm:mb-2">
-              {selectedReviewId ? "Update" : "Add"}
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={startDate ? new Date(startDate) : undefined}
+                onSelect={(date) => setStartDate(date?.toISOString()!)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Popover modal={true}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "ww-[280px] justify-start text-left font-normal",
+                  !endDate && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {endDate ? (
+                  Intl.DateTimeFormat(undefined, {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  }).format(new Date(endDate))
+                ) : (
+                  <span>End Date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={endDate ? new Date(endDate) : undefined}
+                onSelect={(date) => setEndDate(date?.toISOString()!)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline-destructive" type="button">
+              Cancel
             </Button>
-          </DialogFooter>
-        </form>
-      </Form>
+          </DialogClose>
+          <Button type="submit" className="max-sm:mb-2">
+            {libraryStatus?.attributes?.id ? "Update" : "Add"}
+          </Button>
+        </DialogFooter>
+      </form>
     </>
   );
 }

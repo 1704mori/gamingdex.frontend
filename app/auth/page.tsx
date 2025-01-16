@@ -253,7 +253,7 @@ function AuthComponent() {
   );
 }
 
-export function AuthPage() {
+export default function AuthPage() {
   return (
     <Suspense>
       <AuthComponent />

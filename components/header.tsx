@@ -193,7 +193,7 @@ export default function Header() {
                     <Link href="/auth">Sign in</Link>
                   </Button>
                   <Button size="xs" variant="outline">
-                    Register
+                    <Link href="/auth?m=r">Register</Link>
                   </Button>
                 </div>
               )}

@@ -55,6 +55,17 @@ export function GamesCards() {
     );
   }
 
+  const coverUrl = (url: string) => {
+    if (!url) return "/placeholder.svg"
+
+
+    if (url.startsWith("//")) {
+      url = `https:${url.replace("t_thumb", "t_1080p")}`
+    }
+
+    return url
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -67,7 +78,7 @@ export function GamesCards() {
               <Image
                 className="object-cover"
                 alt={game.title}
-                src={game.cover_url!}
+                src={coverUrl(game.cover_url!)}
                 placeholder={`data:image/svg+xml;base64,${toBase64(shimmer(500, 300))}`}
                 fill
               />

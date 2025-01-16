@@ -10,7 +10,7 @@ import { Mail, Lock, User } from "lucide-react";
 import { API_URL } from "@/lib/utils";
 import { toast } from "sonner";
 import { setTokenToCookie } from "@/lib/jwt";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -26,6 +26,8 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
+
+  const searchParams = useSearchParams();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -44,7 +46,10 @@ export default function AuthPage() {
   useEffect(() => {
     signupForm.reset();
     loginForm.reset();
-  }, [isLogin]);
+    if (searchParams.has("m")) {
+      setIsLogin(false);
+    }
+  }, [isLogin, searchParams]);
 
   const onLoginSubmit: SubmitHandler<LoginFormValues> = async (data) => {
     const response = await fetch(`${API_URL}/auth/login`, {
@@ -66,7 +71,7 @@ export default function AuthPage() {
 
     let error = await setTokenToCookie(
       "gd:accessToken",
-      result.attributes?.accessToken!,
+      result.attributes?.accessToken!
     );
     if (error != "") {
       toast.error("Could not log you in this time, try again.");
@@ -75,7 +80,7 @@ export default function AuthPage() {
 
     error = await setTokenToCookie(
       "gd:refreshToken",
-      result.attributes?.refreshToken!,
+      result.attributes?.refreshToken!
     );
     if (error != "") {
       toast.error("Could not log you in this time, try again.");

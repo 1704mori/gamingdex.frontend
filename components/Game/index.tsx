@@ -198,6 +198,17 @@ export default function Game({ game }: { game: GameType }) {
     setOpenReviewDialog(true);
   };
 
+  const coverUrl = (url: string) => {
+    if (!url) return "/placeholder.svg"
+
+
+    if (url.startsWith("//")) {
+      url = `https:${url.replace("t_thumb", "t_1080p")}`
+    }
+
+    return url
+  }
+
   return (
     <main className="flex flex-col">
       <section className="w-full py-20 bg-neutral-900 text-neutral-50 dark:bg-neutral-950 dark:text-neutral-50">
@@ -209,7 +220,7 @@ export default function Game({ game }: { game: GameType }) {
                   className="aspect-square"
                   objectFit="cover"
                   alt={game.title}
-                  src={game.cover_url!}
+                  src={coverUrl(game.cover_url!)}
                   placeholder={`data:image/svg+xml;base64,${toBase64(shimmer(700, 475))}`}
                   fill
                 />

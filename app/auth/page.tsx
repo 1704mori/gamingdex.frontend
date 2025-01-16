@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,7 +24,7 @@ const signupSchema = loginSchema.extend({
 type LoginFormValues = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
 
-export default function AuthPage() {
+function AuthComponent() {
   const [isLogin, setIsLogin] = useState(true);
 
   const searchParams = useSearchParams();
@@ -250,5 +250,13 @@ export default function AuthPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export function AuthPage() {
+  return (
+    <Suspense>
+      <AuthComponent />
+    </Suspense>
   );
 }
